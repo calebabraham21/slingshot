@@ -1,34 +1,52 @@
 # Slingshot
 
-Lightweight web app that tracks pregame underdogs across NBA, NFL, MLB, NHL, and soccer, then ranks them in one live feed. Open it and instantly see which big underdogs are currently winning or still within striking distance.
+Lightweight web app that tracks pregame underdogs across NBA, NFL, MLB, NHL, and soccer, then ranks them in one live feed.
 
 Pregame odds only. No live win probability model.
 
 ## Stack
 
 - **Client:** Vite, React, TypeScript, Tailwind CSS
-- **Server:** Coming later (polls odds/scores, ranked games API)
+- **Server:** Express + ESPN scoreboards (scores/clock/logos) + The Odds API (moneylines locked near tipoff)
 
-## Run the client
+## How credits work
+
+Friends refreshing the site do **not** hit The Odds API.
+
+- Browser only calls our `/games` endpoint (cached feed)
+- Server polls ESPN for scores about every 30s (free)
+- Server checks Odds API only when a game is inside the last **10 minutes** before tip, then locks that line forever
+
+## Local dev
+
+### Server
 
 ```bash
-cd client
+cd server
+cp .env.example .env
+# set ODDS_API_KEY
 npm install
 npm run dev
 ```
 
-Open the URL Vite prints (usually `http://localhost:5173`).
+### Client
 
 ```bash
-npm test
+cd client
+cp .env.example .env
+# VITE_API_BASE_URL=http://localhost:3000
+npm install
+npm run dev
 ```
 
-Runs the odds utility unit tests.
+## Deploy (Railway, one public URL)
 
-## Project layout
+1. Push this repo to GitHub
+2. Create a Railway project from the repo
+3. Set the service **Root Directory** to `server`
+4. Add env var `ODDS_API_KEY`
+5. Deploy
 
-```
-slingshot/
-  client/   React frontend
-  server/   API stub (empty for now)
-```
+Build installs the client, builds it into `client/dist`, and the server serves the UI + `/games` from one URL.
+
+Share that Railway URL with friends.

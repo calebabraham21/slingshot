@@ -6,13 +6,19 @@ import { getGames } from './lib/api'
 import { rankGames } from './lib/rank'
 import type { Game } from './types'
 
+const REFRESH_MS = 30_000
+
 function LoadingList() {
   return (
-    <div className="space-y-3" aria-busy="true" aria-label="Loading games">
-      {[0, 1, 2].map((i) => (
+    <div
+      className="grid gap-4 sm:grid-cols-2"
+      aria-busy="true"
+      aria-label="Loading games"
+    >
+      {[0, 1, 2, 3].map((i) => (
         <div
           key={i}
-          className="h-28 animate-pulse rounded-xl border border-zinc-800/60 bg-zinc-900/40"
+          className="h-36 animate-pulse rounded-2xl border border-zinc-800/60 bg-zinc-900/40"
         />
       ))}
     </div>
@@ -22,9 +28,9 @@ function LoadingList() {
 function EmptyState({ sport }: { sport: SportFilter }) {
   const label = sport === 'ALL' ? 'any sport' : sport === 'SOCCER' ? 'Soccer' : sport
   return (
-    <div className="rounded-xl border border-dashed border-zinc-700/80 px-6 py-14 text-center">
-      <p className="text-sm font-semibold text-zinc-300">No underdogs here</p>
-      <p className="mt-1.5 text-sm text-zinc-500">
+    <div className="rounded-2xl border border-dashed border-zinc-700/80 px-6 py-16 text-center">
+      <p className="text-base font-semibold text-zinc-300">No underdogs here</p>
+      <p className="mt-2 text-sm text-zinc-500">
         Nothing ranked for {label} right now. Try another filter.
       </p>
     </div>
@@ -38,20 +44,30 @@ export default function App() {
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
-    getGames()
-      .then((data) => {
-        if (!cancelled) {
-          setGames(data)
-        }
-      })
-      .finally(() => {
-        if (!cancelled) {
-          setLoading(false)
-        }
-      })
+
+    const load = (showLoading: boolean) => {
+      if (showLoading) {
+        setLoading(true)
+      }
+      getGames()
+        .then((data) => {
+          if (!cancelled) {
+            setGames(data)
+          }
+        })
+        .finally(() => {
+          if (!cancelled) {
+            setLoading(false)
+          }
+        })
+    }
+
+    load(true)
+    const id = window.setInterval(() => load(false), REFRESH_MS)
+
     return () => {
       cancelled = true
+      window.clearInterval(id)
     }
   }, [])
 
@@ -65,16 +81,16 @@ export default function App() {
       <div className="relative">
         <Header />
         <SportTabs value={sport} onChange={setSport} />
-        <main className="mx-auto max-w-lg px-4 py-4">
+        <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
           {loading ? (
             <LoadingList />
           ) : ranked.length === 0 ? (
             <EmptyState sport={sport} />
           ) : (
-            <ul className="space-y-3">
-              {ranked.map((game, index) => (
+            <ul className="grid gap-4 sm:grid-cols-2">
+              {ranked.map((game) => (
                 <li key={game.id}>
-                  <GameCard game={game} rank={index + 1} />
+                  <GameCard game={game} />
                 </li>
               ))}
             </ul>

@@ -4,7 +4,6 @@ import { StateBadge } from './StateBadge'
 
 interface GameCardProps {
   game: Game
-  rank: number
 }
 
 function formatKickoff(iso: string): string {
@@ -17,30 +16,42 @@ function formatKickoff(iso: string): string {
 }
 
 function TeamRow({
-  abbreviation,
   name,
+  logo,
   score,
   isUnderdog,
   showScore,
 }: {
-  abbreviation: string
   name: string
+  logo?: string
   score: number
   isUnderdog: boolean
   showScore: boolean
 }) {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3.5">
+      {logo ? (
+        <img
+          src={logo}
+          alt=""
+          width={40}
+          height={40}
+          className={`h-10 w-10 shrink-0 object-contain sm:h-11 sm:w-11 ${
+            isUnderdog ? 'opacity-100' : 'opacity-70'
+          }`}
+        />
+      ) : (
+        <span
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-xs font-bold sm:h-11 sm:w-11 ${
+            isUnderdog ? 'text-zinc-100' : 'text-zinc-500'
+          }`}
+        >
+          {name.slice(0, 1)}
+        </span>
+      )}
       <span
-        className={`w-10 shrink-0 text-sm font-bold tabular-nums ${
-          isUnderdog ? 'text-zinc-50' : 'text-zinc-400'
-        }`}
-      >
-        {abbreviation}
-      </span>
-      <span
-        className={`min-w-0 flex-1 truncate text-sm ${
-          isUnderdog ? 'font-semibold text-zinc-100' : 'text-zinc-400'
+        className={`min-w-0 flex-1 truncate text-base sm:text-[17px] ${
+          isUnderdog ? 'font-semibold text-zinc-50' : 'font-medium text-zinc-400'
         }`}
       >
         {name}
@@ -52,7 +63,7 @@ function TeamRow({
       </span>
       {showScore && (
         <span
-          className={`w-7 text-right text-base font-bold tabular-nums ${
+          className={`w-8 text-right text-lg font-bold tabular-nums sm:w-10 sm:text-xl ${
             isUnderdog ? 'text-zinc-50' : 'text-zinc-400'
           }`}
         >
@@ -63,7 +74,7 @@ function TeamRow({
   )
 }
 
-export function GameCard({ game, rank }: GameCardProps) {
+export function GameCard({ game }: GameCardProps) {
   const underdog =
     game.underdogSide === 'home' ? game.home : game.away
   const underdogMl =
@@ -81,41 +92,40 @@ export function GameCard({ game, rank }: GameCardProps) {
       : (game.clock ?? game.status)
 
   return (
-    <article className="rounded-xl border border-zinc-800/90 bg-zinc-900/60 px-3.5 py-3.5">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 text-xs text-zinc-500">
-          <span className="font-mono text-[11px] text-zinc-600">#{rank}</span>
+    <article className="rounded-2xl border border-zinc-800/90 bg-zinc-900/60 px-4 py-4 sm:px-5 sm:py-5">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm text-zinc-500">
           <span className="font-semibold uppercase tracking-wide text-zinc-400">
             {game.league}
           </span>
           <span aria-hidden="true">·</span>
-          <span>{timeLabel}</span>
+          <span className="truncate">{timeLabel}</span>
         </div>
         <StateBadge state={game.underdogState} />
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-3">
         <TeamRow
-          abbreviation={game.away.abbreviation}
           name={game.away.name}
+          logo={game.away.logo}
           score={game.away.score}
           isUnderdog={game.underdogSide === 'away'}
           showScore={showScore}
         />
         <TeamRow
-          abbreviation={game.home.abbreviation}
           name={game.home.name}
+          logo={game.home.logo}
           score={game.home.score}
           isUnderdog={game.underdogSide === 'home'}
           showScore={showScore}
         />
       </div>
 
-      <div className="mt-3 flex items-center justify-between border-t border-zinc-800/80 pt-3 text-xs">
-        <span className="text-zinc-500">
-          {underdog.abbreviation} pregame
+      <div className="mt-4 flex items-center justify-between gap-3 border-t border-zinc-800/80 pt-3.5 text-sm">
+        <span className="truncate text-zinc-500">
+          {underdog.name} pregame
         </span>
-        <span className="font-semibold tabular-nums text-zinc-200">
+        <span className="shrink-0 font-semibold tabular-nums text-zinc-200">
           {formatMoneyline(underdogMl)}
           <span className="mx-1.5 text-zinc-600">·</span>
           {(underdogProb * 100).toFixed(0)}% win

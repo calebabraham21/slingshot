@@ -12,6 +12,9 @@ build/
 coverage/
 *.tsbuildinfo
 
+# Server runtime data (locked pregame odds, etc.)
+server/data/
+
 # Logs
 npm-debug.log*
 yarn-debug.log*

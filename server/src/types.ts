@@ -40,3 +40,14 @@ export interface Game {
   underdogSide: Side
   underdogState: UnderdogState
 }
+
+export interface SportConfig {
+  key: string
+  sport: Sport
+  league: string
+  /** ESPN site/core API path segments, when available. */
+  espn?: {
+    sport: string
+    league: string
+  }
+}
