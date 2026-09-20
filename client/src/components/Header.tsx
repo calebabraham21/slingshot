@@ -6,7 +6,7 @@ export function Header() {
           <img
             src="/slingshot-logo-white.png"
             alt="Slingshot"
-            className="h-9 w-auto sm:h-10"
+            className="h-14 w-auto sm:h-16 md:h-20"
           />
         </a>
         <p className="hidden text-sm text-zinc-500 sm:block">
