@@ -1,56 +1,22 @@
-import type { GameStatus, Sport, UnderdogState } from '../types.js'
-
-/** Max deficit (favorite leads by this many) still counted as striking distance. */
-const STRIKING_DISTANCE: Record<Sport, number> = {
-  NBA: 10,
-  NFL: 8,
-  MLB: 2,
-  NHL: 1,
-  SOCCER: 1,
-}
-
-export function deriveStatus(
-  commenceTime: string,
-  completed: boolean,
-  hasScores: boolean,
-): GameStatus {
-  if (completed) {
-    return 'final'
-  }
-  if (hasScores || Date.parse(commenceTime) <= Date.now()) {
-    return 'live'
-  }
-  return 'pregame'
-}
+import type { GameStatus, UnderdogState } from '../types.js'
 
 /**
- * Rule-based underdog state from score margin.
- * Clock/period comes from ESPN; this classifier is still margin-based for now.
+ * Lightweight server-side placeholder. The client recomputes status with
+ * live win-chance estimates via deriveCardStatus / enrichGame.
  */
 export function deriveUnderdogState(args: {
   status: GameStatus
   underdogScore: number
   favoriteScore: number
-  sport: Sport
 }): UnderdogState {
-  const { status, underdogScore, favoriteScore, sport } = args
-
-  if (status === 'pregame') {
-    return 'pregame'
-  }
+  const { status, underdogScore, favoriteScore } = args
+  if (status === 'pregame') return 'not_started'
   if (status === 'final') {
-    return 'final'
+    return underdogScore > favoriteScore
+      ? 'final_upset'
+      : 'final_favorite_held'
   }
-
-  const margin = underdogScore - favoriteScore
-  if (margin > 0) {
-    return 'upset_in_progress'
-  }
-  if (margin === 0) {
-    return 'striking_distance'
-  }
-  if (Math.abs(margin) <= STRIKING_DISTANCE[sport]) {
-    return 'striking_distance'
-  }
+  if (underdogScore > favoriteScore) return 'leading_early'
+  if (underdogScore === favoriteScore) return 'still_in_it'
   return 'fading'
 }

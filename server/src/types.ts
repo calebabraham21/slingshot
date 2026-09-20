@@ -4,10 +4,13 @@ export type GameStatus = 'pregame' | 'live' | 'final'
 
 export type UnderdogState =
   | 'upset_in_progress'
-  | 'striking_distance'
+  | 'leading_early'
+  | 'still_in_it'
+  | 'long_shot'
+  | 'not_started'
   | 'fading'
-  | 'pregame'
-  | 'final'
+  | 'final_upset'
+  | 'final_favorite_held'
 
 export type Side = 'home' | 'away'
 
@@ -15,7 +18,6 @@ export interface Team {
   name: string
   abbreviation: string
   score: number
-  /** ESPN CDN logo URL when available. */
   logo?: string
 }
 
@@ -26,6 +28,9 @@ export interface Game {
   startTime: string
   status: GameStatus
   clock?: string
+  period?: number
+  clockSeconds?: number
+  delayed?: boolean
   home: Team
   away: Team
   pregameMoneyline: {
@@ -45,7 +50,6 @@ export interface SportConfig {
   key: string
   sport: Sport
   league: string
-  /** ESPN site/core API path segments, when available. */
   espn?: {
     sport: string
     league: string

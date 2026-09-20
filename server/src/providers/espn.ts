@@ -28,6 +28,9 @@ export interface EspnGameSnapshot {
   startTime: string
   state: 'pre' | 'in' | 'post'
   clock?: string
+  period?: number
+  clockSeconds?: number
+  delayed?: boolean
   homeMl?: number
   awayMl?: number
 }
@@ -36,10 +39,16 @@ interface ScoreboardEvent {
   id: string
   date?: string
   status: {
+    clock?: number
+    displayClock?: string
+    period?: number
     type: {
+      id?: string
+      name?: string
       state: string
       shortDetail?: string
       detail?: string
+      description?: string
       completed?: boolean
     }
   }
@@ -199,6 +208,12 @@ export async function fetchEspnScoreboard(
     const stateRaw = event.status.type.state
     const state: EspnGameSnapshot['state'] =
       stateRaw === 'in' ? 'in' : stateRaw === 'post' ? 'post' : 'pre'
+    const typeName = event.status.type.name ?? ''
+    const delayed =
+      typeName.includes('DELAYED') ||
+      (event.status.type.shortDetail ?? '')
+        .toLowerCase()
+        .includes('delayed')
 
     snapshots.push({
       espnId: event.id,
@@ -213,6 +228,12 @@ export async function fetchEspnScoreboard(
       startTime: competition.date ?? event.date ?? new Date().toISOString(),
       state,
       clock: event.status.type.shortDetail ?? event.status.type.detail,
+      period: event.status.period,
+      clockSeconds:
+        typeof event.status.clock === 'number'
+          ? event.status.clock
+          : undefined,
+      ...(delayed ? { delayed: true } : {}),
       ...(ml ? { homeMl: ml.home, awayMl: ml.away } : {}),
     })
   }

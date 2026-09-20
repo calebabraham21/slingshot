@@ -85,7 +85,6 @@ function buildGame(
     status,
     underdogScore,
     favoriteScore,
-    sport: sport.sport,
   })
 
   return {
@@ -95,6 +94,9 @@ function buildGame(
     startTime: snap.startTime,
     status,
     clock: snap.clock,
+    ...(snap.period != null ? { period: snap.period } : {}),
+    ...(snap.clockSeconds != null ? { clockSeconds: snap.clockSeconds } : {}),
+    ...(snap.delayed ? { delayed: true } : {}),
     home: {
       name: snap.homeName,
       abbreviation: snap.homeAbbrev,
