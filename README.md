@@ -43,10 +43,8 @@ npm run dev
 
 1. Push this repo to GitHub
 2. Create a Railway project from the repo
-3. Set the service **Root Directory** to `server`
+3. Leave **Root Directory** empty (repo root), do **not** set it to `server`
 4. Add env var `ODDS_API_KEY`
 5. Deploy
 
-Build installs the client, builds it into `client/dist`, and the server serves the UI + `/games` from one URL.
-
-Share that Railway URL with friends.
+The root `railway.json` builds the client, installs server deps, and starts the API which also serves the UI.
