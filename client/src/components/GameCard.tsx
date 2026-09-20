@@ -4,6 +4,7 @@ import { deriveCardStatus } from '../lib/cardStatus'
 import { estimateUnderdogWinProb } from '../lib/liveProb'
 import { slingshotMeter } from '../lib/slingshotMeter'
 import { StateBadge } from './StateBadge'
+import { SlingshotMeter } from './SlingshotMeter'
 
 interface GameCardProps {
   game: Game
@@ -155,35 +156,7 @@ function WinChanceBlock({
   )
 }
 
-/** Visual only: no numbers. Fills hotter (dark orange) as the meter maxes out. */
-function SlingshotMeterBar({ value }: { value: number }) {
-  const fill = Math.min(100, Math.max(0, Math.round(value)))
-  const fillClass =
-    fill >= 75
-      ? 'bg-orange-700'
-      : fill >= 45
-        ? 'bg-orange-800/90'
-        : 'bg-zinc-500'
 
-  return (
-    <div className="mt-3">
-      <div className="mb-1.5 text-xs text-zinc-500">Slingshot</div>
-      <div
-        className="h-1.5 overflow-hidden rounded-full bg-zinc-800"
-        role="meter"
-        aria-label="Slingshot meter"
-        aria-valuenow={fill}
-        aria-valuemin={0}
-        aria-valuemax={100}
-      >
-        <div
-          className={`h-full rounded-full transition-[width,background-color] duration-500 ${fillClass}`}
-          style={{ width: `${fill}%` }}
-        />
-      </div>
-    </div>
-  )
-}
 
 export function GameCard({ game }: GameCardProps) {
   const status = deriveCardStatus(game)
@@ -258,7 +231,7 @@ export function GameCard({ game }: GameCardProps) {
         showDelta={game.status !== 'pregame'}
       />
 
-      <SlingshotMeterBar value={meter} />
+      <SlingshotMeter value={meter} />
     </article>
   )
 }
