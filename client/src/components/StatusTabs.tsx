@@ -27,12 +27,18 @@ export function StatusTabs({ value, onChange }: StatusTabsProps) {
             role="tab"
             aria-selected={active}
             onClick={() => onChange(tab.id)}
-            className={`rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors ${
+            className={`inline-flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors ${
               active
                 ? 'bg-zinc-100 text-zinc-900'
                 : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
+            {tab.id === 'live' && (
+              <span
+                className="live-dot h-1.5 w-1.5 shrink-0 rounded-full bg-red-500"
+                aria-hidden="true"
+              />
+            )}
             {tab.label}
           </button>
         )

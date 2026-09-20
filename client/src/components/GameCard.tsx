@@ -207,7 +207,11 @@ export function GameCard({ game }: GameCardProps) {
 
   return (
     <article
-      className="rounded-xl border border-zinc-800 bg-zinc-900/80 px-4 py-4 sm:px-5 sm:py-5"
+      className={`rounded-xl border bg-zinc-900/80 px-4 py-4 sm:px-5 sm:py-5 ${
+        status.state === 'upset_in_progress'
+          ? 'upset-hot border-emerald-800/70'
+          : 'border-zinc-800'
+      }`}
     >
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-zinc-500">

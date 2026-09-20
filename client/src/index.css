@@ -29,3 +29,43 @@ body {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+@keyframes live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.live-dot {
+  animation: live-pulse 1.4s ease-in-out infinite;
+}
+
+/* Lightweight “on fire” frame for true upsets. CSS shadow only. */
+@keyframes upset-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.18), 0 0 12px rgba(52, 211, 153, 0.08);
+  }
+  50% {
+    box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.32), 0 0 18px rgba(52, 211, 153, 0.16);
+  }
+}
+
+.upset-hot {
+  animation: upset-glow 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-dot,
+  .upset-hot {
+    animation: none;
+  }
+
+  .upset-hot {
+    box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.22);
+  }
+}
