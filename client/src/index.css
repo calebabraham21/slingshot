@@ -14,7 +14,7 @@ body {
   margin: 0;
   min-height: 100dvh;
   font-family: var(--font-sans);
-  background-color: #09090b;
+  background-color: #0c0c0e;
   -webkit-font-smoothing: antialiased;
 }
 
