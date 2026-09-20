@@ -9,11 +9,11 @@ import {
  * Chances are 0-1 (est. underdog win probability).
  */
 export const CARD_STATUS_THRESHOLDS = {
-  /** Underdog leading + est. chance at/above this => Upset in progress (unless Early) */
+  /** Underdog leading + est. chance at/above this => Howling (unless Early) */
   upsetChance: 0.6,
-  /** Trailing / tied still alive if est. chance at/above this */
+  /** Trailing / tied still alive if est. chance at/above this => Growling */
   stillInItChance: 0.25,
-  /** Below stillInIt but at/above this => Long shot; under this => Fading */
+  /** Below Growling but at/above this => Chirping; under this => Hushed */
   longShotChance: 0.08,
 } as const
 
@@ -41,7 +41,7 @@ export function deriveCardStatus(game: Game): CardStatusMeta {
   if (game.status === 'pregame') {
     return {
       state: 'not_started',
-      label: 'Not started',
+      label: 'On the leash',
       tone: 'notStarted',
     }
   }
@@ -52,11 +52,11 @@ export function deriveCardStatus(game: Game): CardStatusMeta {
 
   if (game.status === 'final') {
     if (lead > 0) {
-      return { state: 'final_upset', label: 'Upset', tone: 'finalUpset' }
+      return { state: 'final_upset', label: 'Howled', tone: 'finalUpset' }
     }
     return {
       state: 'final_favorite_held',
-      label: 'Favorite held',
+      label: 'Silenced',
       tone: 'finalHeld',
     }
   }
@@ -68,13 +68,13 @@ export function deriveCardStatus(game: Game): CardStatusMeta {
     ) {
       return {
         state: 'upset_in_progress',
-        label: 'Upset in progress',
+        label: 'Howling',
         tone: 'upset',
       }
     }
     return {
       state: 'leading_early',
-      label: 'Leading, early',
+      label: 'Barking',
       tone: 'leadingEarly',
     }
   }
@@ -82,7 +82,7 @@ export function deriveCardStatus(game: Game): CardStatusMeta {
   if (lead === 0 || liveChance >= CARD_STATUS_THRESHOLDS.stillInItChance) {
     return {
       state: 'still_in_it',
-      label: 'Still in it',
+      label: 'Growling',
       tone: 'stillInIt',
     }
   }
@@ -90,14 +90,14 @@ export function deriveCardStatus(game: Game): CardStatusMeta {
   if (liveChance >= CARD_STATUS_THRESHOLDS.longShotChance) {
     return {
       state: 'long_shot',
-      label: 'Long shot',
+      label: 'Chirping',
       tone: 'longShot',
     }
   }
 
   return {
     state: 'fading',
-    label: 'Fading',
+    label: 'Hushed',
     tone: 'fading',
   }
 }

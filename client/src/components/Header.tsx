@@ -10,7 +10,7 @@ export function Header() {
           />
         </a>
         <p className="hidden text-sm text-zinc-500 sm:block">
-          Live underdogs ranked by pregame odds
+          Underdogs ranked by win chance
         </p>
       </div>
     </header>

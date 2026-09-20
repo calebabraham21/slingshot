@@ -1,64 +1,70 @@
-/** Irregular pebble path (viewBox 0 0 32 32). */
+/** Centered stone silhouettes (viewBox 0 0 40 40). */
+const ROCK_PATHS = [
+  'M20 6.5c4.2.2 8.2 2.4 10.2 6.1 1.9 3.5 1.6 7.8-.6 11.1-2.3 3.4-6.2 5.4-10.2 5.3-4.1-.1-8.1-2.3-10-5.9-1.8-3.4-1.4-7.6.9-10.8C12.6 8.2 16.4 6.3 20 6.5z',
+  'M20 5.8c4.6.4 8.6 3.1 10.4 7.1 1.7 3.8.9 8.3-1.8 11.4-2.6 3-6.8 4.6-10.8 4.2-4.1-.4-7.8-3.1-9.5-6.9-1.6-3.6-.8-7.9 1.9-10.9 2.8-3.1 6.6-5.1 9.8-4.9z',
+  'M19.8 6.2c4.8-.2 9.1 2.6 11 6.8 1.8 3.9.9 8.5-1.9 11.6-2.7 3-7 4.5-11 4.1-4-.4-7.6-3.2-9.3-6.9-1.6-3.5-.7-7.7 2-10.7 2.6-2.9 6.1-4.7 9.2-4.9z',
+  'M20.2 5.5c4.4.1 8.5 2.8 10.5 6.6 2 3.7 1.5 8.2-.9 11.5-2.4 3.3-6.5 5.2-10.6 5-4.2-.2-8.1-2.6-10.1-6.3-1.9-3.5-1.4-7.8 1-11 2.5-3.3 6.4-5.6 10.1-5.8z',
+  'M20 6c4.5-.3 8.8 2.2 11 6.1 2.1 3.7 1.6 8.3-.9 11.6-2.5 3.3-6.7 5.1-10.8 4.9-4.2-.2-8.2-2.5-10.3-6.2-2-3.5-1.5-7.9.9-11.1C12.3 7.8 16.2 5.7 20 6z',
+  'M20.1 5.2c4.7.2 9 3 11.1 7.1 2 3.9 1.2 8.7-1.7 12-2.8 3.2-7.2 4.8-11.4 4.4-4.3-.4-8.2-3.3-10.1-7.3-1.8-3.8-.9-8.4 2-11.5 2.9-3.1 7-4.9 10.1-4.7z',
+]
+
+/** Small → large across the card (horizontal cone). */
+const ROCK_SIZES = [14, 18, 24, 30, 38, 46]
+
 function RockSvg({
+  path,
   size,
   active,
   hot,
 }: {
+  path: string
   size: number
   active: boolean
   hot: boolean
 }) {
-  const fill = !active
-    ? '#3f3f46'
-    : hot
-      ? '#c2410c'
-      : '#a8a29e'
+  const fill = !active ? '#3f3f46' : hot ? '#c2410c' : '#a8a29e'
 
   return (
     <svg
       width={size}
       height={size}
-      viewBox="0 0 32 32"
+      viewBox="0 0 40 40"
       aria-hidden="true"
-      className="shrink-0 transition-colors duration-500"
+      className="block transition-colors duration-500"
     >
-      <path
-        d="M9 7.5c3.2-2.8 8.4-3.4 12.2-1.2 3.1 1.8 5.2 5.1 4.9 8.7-.3 3.8-2.1 6.6-5.2 8.4-3.4 2-7.8 2.2-11.1.3C6.4 21.5 4.2 17.8 4.5 13.9c.3-3.2 2.2-4.9 4.5-6.4z"
-        fill={fill}
-      />
-      <path
-        d="M11.2 11.4c1.4-.9 3.2-1 4.5-.2.4.3.5.9.1 1.2-.9.7-2.2.7-3.2.1-.4-.3-.5-.8-.1-1.1z"
-        fill={active ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.06)'}
+      <path d={path} fill={fill} />
+      <ellipse
+        cx="15.5"
+        cy="14"
+        rx="5"
+        ry="3.2"
+        fill={active ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.05)'}
+        transform="rotate(-28 15.5 14)"
       />
     </svg>
   )
 }
-
-const ROCK_COUNT = 6
-/** Small → large (cone / stone size). */
-const ROCK_SIZES = [10, 13, 16, 20, 25, 31]
 
 interface SlingshotMeterProps {
   value: number
 }
 
 /**
- * Slingshot meter as growing rocks (David stone size).
- * No numbers. Dark orange when the upset stone is fully loaded.
+ * Full-width slingshot meter: small → large rocks on one straight center line.
  */
 export function SlingshotMeter({ value }: SlingshotMeterProps) {
   const fill = Math.min(100, Math.max(0, Math.round(value)))
   const lit = Math.min(
-    ROCK_COUNT,
-    Math.max(0, Math.ceil((fill / 100) * ROCK_COUNT)),
+    ROCK_SIZES.length,
+    Math.max(0, Math.ceil((fill / 100) * ROCK_SIZES.length)),
   )
   const hot = fill >= 75
 
   return (
     <div className="mt-3">
-      <div className="mb-1.5 text-xs text-zinc-500">Slingshot</div>
+      <div className="mb-1.5 text-xs text-zinc-500">Slingshot meter</div>
       <div
-        className="flex items-end gap-1.5 sm:gap-2"
+        className="grid w-full grid-cols-6 items-center"
         role="meter"
         aria-label="Slingshot meter"
         aria-valuenow={fill}
@@ -66,12 +72,14 @@ export function SlingshotMeter({ value }: SlingshotMeterProps) {
         aria-valuemax={100}
       >
         {ROCK_SIZES.map((size, i) => (
-          <RockSvg
-            key={i}
-            size={size}
-            active={i < lit}
-            hot={hot && i < lit}
-          />
+          <div key={i} className="flex items-center justify-center">
+            <RockSvg
+              path={ROCK_PATHS[i]!}
+              size={size}
+              active={i < lit}
+              hot={hot && i < lit}
+            />
+          </div>
         ))}
       </div>
     </div>
