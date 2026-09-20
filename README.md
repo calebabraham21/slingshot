@@ -47,4 +47,5 @@ npm run dev
 4. Add env var `ODDS_API_KEY`
 5. Deploy
 
-The root `railway.json` builds the client, installs server deps, and starts the API which also serves the UI.
+Railway uses the root `package.json` / `nixpacks.toml` to install Node, build the client, and start the server (which also serves the UI).
+
