@@ -1,11 +1,8 @@
 import type { Game } from '../types'
 import { formatMoneyline } from '../lib/odds'
 import { deriveCardStatus } from '../lib/cardStatus'
-import {
-  estimateUnderdogWinProb,
-  getGameProgress,
-  progressLabel,
-} from '../lib/liveProb'
+import { estimateUnderdogWinProb } from '../lib/liveProb'
+import { slingshotMeter } from '../lib/slingshotMeter'
 import { StateBadge } from './StateBadge'
 
 interface GameCardProps {
@@ -158,30 +155,31 @@ function WinChanceBlock({
   )
 }
 
-function ProgressBlock({ game }: { game: Game }) {
-  const progress = getGameProgress(game)
-  const label = progressLabel(game)
-  const segments = 3
-  const filled = Math.min(
-    segments,
-    Math.max(0, Math.ceil(progress * segments)),
-  )
+/** Visual only: no numbers. Fills hotter (dark orange) as the meter maxes out. */
+function SlingshotMeterBar({ value }: { value: number }) {
+  const fill = Math.min(100, Math.max(0, Math.round(value)))
+  const fillClass =
+    fill >= 75
+      ? 'bg-orange-700'
+      : fill >= 45
+        ? 'bg-orange-800/90'
+        : 'bg-zinc-500'
 
   return (
     <div className="mt-3">
-      <div className="mb-1.5 flex items-center justify-between text-xs text-zinc-500">
-        <span>Game progress</span>
-        <span className="font-medium text-zinc-400">{label}</span>
-      </div>
-      <div className="flex gap-1">
-        {Array.from({ length: segments }, (_, i) => (
-          <div
-            key={i}
-            className={`h-1 flex-1 rounded-sm ${
-              i < filled ? 'bg-zinc-600' : 'bg-zinc-800'
-            }`}
-          />
-        ))}
+      <div className="mb-1.5 text-xs text-zinc-500">Slingshot</div>
+      <div
+        className="h-1.5 overflow-hidden rounded-full bg-zinc-800"
+        role="meter"
+        aria-label="Slingshot meter"
+        aria-valuenow={fill}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
+        <div
+          className={`h-full rounded-full transition-[width,background-color] duration-500 ${fillClass}`}
+          style={{ width: `${fill}%` }}
+        />
       </div>
     </div>
   )
@@ -198,6 +196,7 @@ export function GameCard({ game }: GameCardProps) {
       ? game.pregameFairProb.home
       : game.pregameFairProb.away
   const liveChance = estimateUnderdogWinProb(game)
+  const meter = slingshotMeter(game)
   const showScore = game.status !== 'pregame'
 
   const timeLabel =
@@ -259,7 +258,7 @@ export function GameCard({ game }: GameCardProps) {
         showDelta={game.status !== 'pregame'}
       />
 
-      {game.status !== 'pregame' && <ProgressBlock game={game} />}
+      <SlingshotMeterBar value={meter} />
     </article>
   )
 }
