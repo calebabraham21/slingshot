@@ -50,6 +50,8 @@ export interface Game {
   period?: number
   clockSeconds?: number
   delayed?: boolean
+  /** TV/stream network from ESPN when available (e.g. "FOX", "ABC"). */
+  broadcast?: string
   home: Team
   away: Team
   pregameMoneyline: {

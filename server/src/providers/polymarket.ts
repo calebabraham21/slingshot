@@ -17,6 +17,26 @@ const SPORT_SLUG_PREFIX: Partial<Record<Sport, string>> = {
   NHL: 'nhl',
 }
 
+/** ESPN abbrev → Polymarket slug abbrevs (lowercase). */
+const ABBREV_ALIASES: Record<string, string[]> = {
+  wsh: ['was', 'wsh'],
+  was: ['was', 'wsh'],
+  lac: ['lac'],
+  lar: ['lar', 'la'],
+  gvsu: ['gvs'], // just in case
+}
+
+export type PolymarketLookup = {
+  sport: Sport
+  awayName: string
+  homeName: string
+  awayLabel: string
+  homeLabel: string
+  startTime: string
+  awayAbbrev?: string
+  homeAbbrev?: string
+}
+
 /** How long a successful event→game link is reused before re-searching. */
 const LINK_TTL_MS = 6 * 60 * 60 * 1000
 /** How long to remember “no Polymarket market” before trying again. */
@@ -99,6 +119,64 @@ function nameTokens(name: string): string[] {
   return normalizeTeamName(name)
     .split(' ')
     .filter((t) => t.length > 2 && !['the', 'and'].includes(t))
+}
+
+/** "Buffalo Bills" → "Bills"; Polymarket search prefers nicknames for NFL. */
+function teamNickname(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length <= 1) return name.trim()
+  return parts[parts.length - 1]!
+}
+
+function abbrevVariants(abbrev: string | undefined): string[] {
+  if (!abbrev) return []
+  const key = abbrev.toLowerCase()
+  const aliases = ABBREV_ALIASES[key] ?? [key]
+  return [...new Set(aliases.map((a) => a.toLowerCase()))]
+}
+
+function uniqueStrings(values: Array<string | null | undefined>): string[] {
+  const out: string[] = []
+  const seen = new Set<string>()
+  for (const v of values) {
+    const t = v?.trim()
+    if (!t) continue
+    const k = t.toLowerCase()
+    if (seen.has(k)) continue
+    seen.add(k)
+    out.push(t)
+  }
+  return out
+}
+
+function slugCandidates(input: PolymarketLookup, dates: string[]): string[] {
+  const prefix = SPORT_SLUG_PREFIX[input.sport]
+  if (!prefix) return []
+  const awayOpts = abbrevVariants(input.awayAbbrev)
+  const homeOpts = abbrevVariants(input.homeAbbrev)
+  if (!awayOpts.length || !homeOpts.length) return []
+  const slugs: string[] = []
+  for (const d of dates) {
+    for (const a of awayOpts) {
+      for (const h of homeOpts) {
+        slugs.push(`${prefix}-${a}-${h}-${d}`)
+      }
+    }
+  }
+  return slugs
+}
+
+function searchQueries(input: PolymarketLookup): string[] {
+  const awayNick = teamNickname(input.awayLabel || input.awayName)
+  const homeNick = teamNickname(input.homeLabel || input.homeName)
+  return uniqueStrings([
+    `${awayNick} ${homeNick}`,
+    `${input.awayLabel} ${input.homeLabel}`,
+    `${input.awayName} ${input.homeName}`,
+    input.awayAbbrev && input.homeAbbrev
+      ? `${input.awayAbbrev} ${input.homeAbbrev}`
+      : null,
+  ])
 }
 
 function titleMatchesTeams(
@@ -223,14 +301,7 @@ function cacheKey(
   return `${sport}|${normalizeTeamName(awayName)}|${normalizeTeamName(homeName)}|${day}`
 }
 
-async function resolveLink(input: {
-  sport: Sport
-  awayName: string
-  homeName: string
-  awayLabel: string
-  homeLabel: string
-  startTime: string
-}): Promise<LinkCacheEntry | null> {
+async function resolveLink(input: PolymarketLookup): Promise<LinkCacheEntry | null> {
   const key = cacheKey(
     input.sport,
     input.awayName,
@@ -252,17 +323,31 @@ async function resolveLink(input: {
   }
 
   const dates = dateCandidates(input.startTime)
-  const queries = [
-    `${input.awayLabel} ${input.homeLabel}`,
-    `${input.awayName} ${input.homeName}`,
-  ]
+
+  // Fast path: dated sport slugs (nfl-lac-buf-2026-09-27, cfb-wake-lou-…).
+  for (const slug of slugCandidates(input, dates)) {
+    const full = await fetchEventBySlug(slug)
+    if (!full) continue
+    const moneyline = pickMoneyline(full.markets)
+    if (!moneyline) continue
+    const linked = linkFromMoneyline(full.slug ?? slug, moneyline, input)
+    if (linked) {
+      linkCache.set(key, linked)
+      missCache.delete(key)
+      return linked
+    }
+  }
 
   let candidates: SearchEvent[] = []
-  for (const q of queries) {
+  for (const q of searchQueries(input)) {
     const found = await searchEvents(q)
     if (found.length) {
       candidates = found
-      break
+      // Prefer a hit that looks like this sport's game slug; otherwise keep searching.
+      const strong = found.some(
+        (e) => e.slug && slugLooksLikeGame(e.slug, input.sport, dates),
+      )
+      if (strong) break
     }
   }
 
@@ -278,48 +363,68 @@ async function resolveLink(input: {
       if (titleMatchesTeams(e.title ?? '', input.awayLabel, input.homeLabel)) {
         score += 20
       }
+      if (
+        titleMatchesTeams(
+          e.title ?? '',
+          teamNickname(input.awayLabel),
+          teamNickname(input.homeLabel),
+        )
+      ) {
+        score += 25
+      }
       if (dates.some((d) => slug.includes(d))) score += 15
       return { event: e, score }
     })
-    .filter((r) => r.score >= 45)
+    .filter((r) => r.score >= 40)
     .sort((a, b) => b.score - a.score)
 
   for (const { event } of ranked) {
     const full = await fetchEventBySlug(event.slug!)
     const moneyline = pickMoneyline(full?.markets)
-    if (!moneyline) continue
-
-    const outcomes = parseJsonArray(moneyline.outcomes)
-    if (outcomes.length !== 2) continue
-
-    const homeIndex = outcomeIndex(outcomes, [
-      input.homeLabel,
-      input.homeName,
-    ])
-    const awayIndex = outcomeIndex(outcomes, [
-      input.awayLabel,
-      input.awayName,
-    ])
-    if (homeIndex == null || awayIndex == null || homeIndex === awayIndex) {
-      continue
+    if (!moneyline || !full) continue
+    const linked = linkFromMoneyline(event.slug!, moneyline, input)
+    if (linked) {
+      linkCache.set(key, linked)
+      missCache.delete(key)
+      return linked
     }
-
-    const tokens = parseJsonArray(moneyline.clobTokenIds)
-    const entry: LinkCacheEntry = {
-      eventSlug: event.slug!,
-      homeIndex,
-      awayIndex,
-      ...(tokens[homeIndex] ? { homeTokenId: tokens[homeIndex] } : {}),
-      ...(tokens[awayIndex] ? { awayTokenId: tokens[awayIndex] } : {}),
-      expiresAt: Date.now() + LINK_TTL_MS,
-    }
-    linkCache.set(key, entry)
-    missCache.delete(key)
-    return entry
   }
 
   missCache.set(key, { expiresAt: Date.now() + MISS_TTL_MS })
   return null
+}
+
+function linkFromMoneyline(
+  eventSlug: string,
+  moneyline: GammaMarket,
+  input: PolymarketLookup,
+): LinkCacheEntry | null {
+  const outcomes = parseJsonArray(moneyline.outcomes)
+  if (outcomes.length !== 2) return null
+
+  const homeIndex = outcomeIndex(outcomes, [
+    teamNickname(input.homeLabel),
+    input.homeLabel,
+    input.homeName,
+  ])
+  const awayIndex = outcomeIndex(outcomes, [
+    teamNickname(input.awayLabel),
+    input.awayLabel,
+    input.awayName,
+  ])
+  if (homeIndex == null || awayIndex == null || homeIndex === awayIndex) {
+    return null
+  }
+
+  const tokens = parseJsonArray(moneyline.clobTokenIds)
+  return {
+    eventSlug,
+    homeIndex,
+    awayIndex,
+    ...(tokens[homeIndex] ? { homeTokenId: tokens[homeIndex] } : {}),
+    ...(tokens[awayIndex] ? { awayTokenId: tokens[awayIndex] } : {}),
+    expiresAt: Date.now() + LINK_TTL_MS,
+  }
 }
 
 /** Point-in-time token price from Polymarket data API (0-1). */
@@ -347,14 +452,7 @@ export async function fetchTokenPriceAsOf(
  * Falls back to null if history is unavailable.
  */
 export async function fetchPolymarketMoneylineAsOf(
-  input: {
-    sport: Sport
-    awayName: string
-    homeName: string
-    awayLabel: string
-    homeLabel: string
-    startTime: string
-  },
+  input: PolymarketLookup,
   asOfEpochSec: number,
 ): Promise<PolymarketMoneyline | null> {
   const link = await resolveLink(input)
@@ -383,14 +481,9 @@ export async function fetchPolymarketMoneylineAsOf(
 /**
  * Resolve current Polymarket moneyline implied probs for an ESPN game.
  */
-export async function fetchPolymarketMoneyline(input: {
-  sport: Sport
-  awayName: string
-  homeName: string
-  awayLabel: string
-  homeLabel: string
-  startTime: string
-}): Promise<PolymarketMoneyline | null> {
+export async function fetchPolymarketMoneyline(
+  input: PolymarketLookup,
+): Promise<PolymarketMoneyline | null> {
   const link = await resolveLink(input)
   if (!link) return null
 
@@ -420,15 +513,7 @@ export async function fetchPolymarketMoneyline(input: {
 
 /** Fetch current moneylines for many games with limited concurrency. */
 export async function fetchPolymarketMoneylines(
-  games: Array<{
-    id: string
-    sport: Sport
-    awayName: string
-    homeName: string
-    awayLabel: string
-    homeLabel: string
-    startTime: string
-  }>,
+  games: Array<PolymarketLookup & { id: string }>,
   concurrency = 4,
 ): Promise<Map<string, PolymarketMoneyline>> {
   const out = new Map<string, PolymarketMoneyline>()

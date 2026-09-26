@@ -1,17 +1,18 @@
 import { describe, expect, it } from 'vitest'
 import type { Game } from '../types'
-import { rankGames } from './rank'
-import { slingshotMeter } from './slingshotMeter'
+import { rankGames, vsCloseDelta } from './rank'
 
 function ncaaf(overrides: {
   id: string
   dogScore: number
   favScore: number
   fair: number
+  live?: number
   period: number
   clockSeconds: number
 }): Game {
-  const { id, dogScore, favScore, fair, period, clockSeconds } = overrides
+  const { id, dogScore, favScore, fair, live, period, clockSeconds } =
+    overrides
   return {
     id,
     sport: 'NCAAF',
@@ -20,50 +21,60 @@ function ncaaf(overrides: {
     status: 'live',
     period,
     clockSeconds,
-    clock: `${Math.floor(clockSeconds / 60)}:${String(clockSeconds % 60).padStart(2, '0')} - ${period}nd`,
+    clock: `${Math.floor(clockSeconds / 60)}:00 - ${period}`,
     home: { name: 'Favorite', abbreviation: 'FAV', score: favScore },
     away: { name: 'Underdog', abbreviation: 'DOG', score: dogScore },
-    pregameMoneyline: { home: -400, away: Math.round((1 - fair) / fair * 100) },
+    pregameMoneyline: { home: -400, away: 300 },
     pregameFairProb: { home: 1 - fair, away: fair },
     underdogSide: 'away',
     underdogState: 'still_in_it',
+    ...(live != null
+      ? {
+          liveMarketProb: {
+            home: 1 - live,
+            away: live,
+            source: 'polymarket' as const,
+          },
+        }
+      : {}),
   }
 }
 
 describe('rankGames', () => {
-  it('puts a +900 dog that is tied ahead of milder dogs with higher raw win%', () => {
-    // South Alabama style: +900 (~10% fair), tied 7-7 in Q2
-    const southAlabama = ncaaf({
-      id: 'usa',
-      dogScore: 7,
+  it('orders by vs-close delta high → low', () => {
+    const plus45 = ncaaf({
+      id: 'a',
+      dogScore: 21,
       favScore: 7,
-      fair: 0.1,
+      fair: 0.2,
+      live: 0.65,
+      period: 3,
+      clockSeconds: 5 * 60,
+    })
+    const plus20 = ncaaf({
+      id: 'b',
+      dogScore: 14,
+      favScore: 10,
+      fair: 0.25,
+      live: 0.45,
       period: 2,
       clockSeconds: 8 * 60,
     })
-    // Wake Forest style: +370 (~21% fair), up 10 mid-game — should still be #1
-    const wakeForest = ncaaf({
-      id: 'wake',
-      dogScore: 17,
-      favScore: 7,
-      fair: 0.213,
-      period: 2,
-      clockSeconds: 6 * 60,
-    })
-    // Milder dog trailing: higher live % than USA but less of a story
-    const mildTrailer = ncaaf({
-      id: 'mild',
-      dogScore: 10,
-      favScore: 17,
-      fair: 0.35,
-      period: 2,
-      clockSeconds: 5 * 60,
+    const minus10 = ncaaf({
+      id: 'c',
+      dogScore: 3,
+      favScore: 24,
+      fair: 0.3,
+      live: 0.2,
+      period: 3,
+      clockSeconds: 2 * 60,
     })
 
-    expect(slingshotMeter(wakeForest)).toBeGreaterThan(slingshotMeter(southAlabama))
-    expect(slingshotMeter(southAlabama)).toBeGreaterThan(slingshotMeter(mildTrailer))
+    expect(vsCloseDelta(plus45)).toBeCloseTo(0.45, 2)
+    expect(vsCloseDelta(plus20)).toBeCloseTo(0.2, 2)
+    expect(vsCloseDelta(minus10)).toBeCloseTo(-0.1, 2)
 
-    const ranked = rankGames([mildTrailer, southAlabama, wakeForest])
-    expect(ranked.map((g) => g.id)).toEqual(['wake', 'usa', 'mild'])
+    const ranked = rankGames([minus10, plus20, plus45])
+    expect(ranked.map((g) => g.id)).toEqual(['a', 'b', 'c'])
   })
 })

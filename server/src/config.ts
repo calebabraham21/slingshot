@@ -14,6 +14,13 @@ export const config = {
   oddsLockWindowMs: Number(process.env.ODDS_LOCK_WINDOW_MS ?? 2 * 60 * 1000),
   /** Still accept a lock briefly after tip if we missed the pregame window. */
   oddsLockGraceMs: Number(process.env.ODDS_LOCK_GRACE_MS ?? 60 * 1000),
+  /**
+   * Include pregame underdogs starting within this horizon (default 2 days).
+   * Uses live Polymarket probs until the lock window freezes close.
+   */
+  upcomingHorizonMs: Number(
+    process.env.UPCOMING_HORIZON_MS ?? 2 * 24 * 60 * 60 * 1000,
+  ),
   /** Only keep games where the underdog's fair win prob is at or below this. */
   maxUnderdogFairProb: Number(process.env.MAX_UNDERDOG_FAIR_PROB ?? 0.42),
 }

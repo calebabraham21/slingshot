@@ -19,12 +19,12 @@ export function Header({ theme, onToggleTheme }: HeaderProps) {
           <img
             src={logoSrc}
             alt="Slingshot"
-            className="h-11 w-auto max-w-full object-contain object-left sm:h-16 md:h-20"
+            className="h-12 w-auto max-w-full object-contain object-left sm:h-[4.5rem] md:h-[5.75rem]"
           />
         </a>
         <div className="flex shrink-0 items-center gap-3">
           <p className="hidden text-sm text-zinc-500 sm:block">
-            Who’s the biggest underdog right now?
+            Which underdog is barking the loudest right now?
           </p>
           <ThemeToggle theme={theme} onToggle={onToggleTheme} />
         </div>

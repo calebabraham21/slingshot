@@ -28,6 +28,14 @@ export function isInOddsLockWindow(startTime: string, now = Date.now()): boolean
   )
 }
 
+/** Pregame tip within the upcoming horizon (default next 2 days). */
+export function isUpcomingPregame(startTime: string, now = Date.now()): boolean {
+  const tip = Date.parse(startTime)
+  if (!Number.isFinite(tip)) return false
+  const msUntil = tip - now
+  return msUntil > 0 && msUntil <= config.upcomingHorizonMs
+}
+
 function statusFromEspn(state: EspnGameSnapshot['state']): GameStatus {
   if (state === 'post') return 'final'
   if (state === 'in') return 'live'
@@ -40,6 +48,8 @@ function snapNames(snap: EspnGameSnapshot) {
     homeName: snap.homeName,
     awayLabel: snap.awayLabel,
     homeLabel: snap.homeLabel,
+    awayAbbrev: snap.awayAbbrev,
+    homeAbbrev: snap.homeAbbrev,
     startTime: snap.startTime,
   }
 }
@@ -47,12 +57,12 @@ function snapNames(snap: EspnGameSnapshot) {
 function buildGame(
   sport: SportConfig,
   snap: EspnGameSnapshot,
-  locked: LockedOdds,
+  probs: { home: number; away: number },
   live: PolymarketMoneyline | null,
 ): Game | null {
   const status = statusFromEspn(snap.state)
-  const homeFair = locked.home
-  const awayFair = locked.away
+  const homeFair = probs.home
+  const awayFair = probs.away
 
   const underdogSide: Side = homeFair <= awayFair ? 'home' : 'away'
   const underdogFair = underdogSide === 'home' ? homeFair : awayFair
@@ -84,6 +94,7 @@ function buildGame(
     ...(snap.period != null ? { period: snap.period } : {}),
     ...(snap.clockSeconds != null ? { clockSeconds: snap.clockSeconds } : {}),
     ...(snap.delayed ? { delayed: true } : {}),
+    ...(snap.broadcast ? { broadcast: snap.broadcast } : {}),
     home: {
       name: snap.homeLabel,
       abbreviation: snap.homeAbbrev,
@@ -197,6 +208,7 @@ export async function rebuildFeedFromCache(): Promise<void> {
     id: string
     sport: SportConfig
     snap: EspnGameSnapshot
+    upcoming: boolean
   }
 
   const candidates: Candidate[] = []
@@ -212,8 +224,13 @@ export async function rebuildFeedFromCache(): Promise<void> {
       const alreadyLocked = getLockedOdds(key)
       const nearTip =
         snap.state === 'pre' && isInOddsLockWindow(snap.startTime)
+      const upcoming =
+        snap.state === 'pre' && isUpcomingPregame(snap.startTime)
       const needsMarket =
-        alreadyLocked != null || nearTip || snap.state !== 'pre'
+        alreadyLocked != null ||
+        nearTip ||
+        snap.state !== 'pre' ||
+        upcoming
       if (!needsMarket) {
         continue
       }
@@ -221,6 +238,7 @@ export async function rebuildFeedFromCache(): Promise<void> {
         id: `espn:${snap.espnId}`,
         sport,
         snap,
+        upcoming,
       })
     }
   }
@@ -234,20 +252,30 @@ export async function rebuildFeedFromCache(): Promise<void> {
   )
 
   const games: Game[] = []
-  for (const { id, sport, snap } of candidates) {
+  for (const { id, sport, snap, upcoming } of candidates) {
     const current = currentById.get(id) ?? null
     const locked = await ensurePolymarketLock(sport, snap, current)
-    if (!locked) {
+
+    if (locked) {
+      const game = buildGame(sport, snap, locked, current)
+      if (game) games.push(game)
       continue
     }
-    const game = buildGame(sport, snap, locked, current)
-    if (game) {
-      games.push(game)
+
+    // Upcoming (not yet locked): show current Polymarket moneyline as the line.
+    if (upcoming && current) {
+      const game = buildGame(
+        sport,
+        snap,
+        { home: current.home, away: current.away },
+        null,
+      )
+      if (game) games.push(game)
     }
   }
 
   console.log(
-    `[polymarket] feed ${games.length} games (${lockedOddsCount()} locks, ${currentById.size} live markets)`,
+    `[polymarket] feed ${games.length} games (${lockedOddsCount()} locks, ${currentById.size} markets)`,
   )
   setFeedGames(rankGames(games), { lockedOdds: lockedOddsCount() })
 }

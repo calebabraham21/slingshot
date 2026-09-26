@@ -6,7 +6,7 @@ import { StatusTabs, type StatusFilter } from './components/StatusTabs'
 import { getGames } from './lib/api'
 import { rankGames } from './lib/rank'
 import { useTheme } from './lib/theme'
-import type { Game } from './types'
+import type { Game, Sport } from './types'
 
 const REFRESH_MS = 15_000
 
@@ -36,7 +36,13 @@ function EmptyState({
 }) {
   const sportLabel = sport === 'ALL' ? 'any sport' : sport
   const statusLabel =
-    status === 'live' ? 'live' : status === 'final' ? 'final' : ''
+    status === 'live'
+      ? 'live'
+      : status === 'upcoming'
+        ? 'upcoming'
+        : status === 'final'
+          ? 'final'
+          : ''
   return (
     <div className="rounded-xl border border-dashed border-zinc-300 px-6 py-16 text-center dark:border-zinc-600">
       <p className="text-base font-semibold text-zinc-700 dark:text-zinc-300">
@@ -54,10 +60,19 @@ function filterByStatus(games: Game[], status: StatusFilter): Game[] {
   if (status === 'live') {
     return games.filter((g) => g.status === 'live')
   }
+  if (status === 'upcoming') {
+    return games.filter((g) => g.status === 'pregame')
+  }
   if (status === 'final') {
     return games.filter((g) => g.status === 'final')
   }
   return games
+}
+
+function sportsInSlice(games: Game[]): Sport[] {
+  const order: Sport[] = ['NBA', 'NFL', 'NCAAF', 'MLB', 'NHL']
+  const present = new Set(games.map((g) => g.sport))
+  return order.filter((s) => present.has(s))
 }
 
 export default function App() {
@@ -96,10 +111,29 @@ export default function App() {
     }
   }, [])
 
+  const statusGames = filterByStatus(games, status)
+  const availableSports = sportsInSlice(statusGames)
+  const availableKey = availableSports.join(',')
+
+  // If the selected sport has no games in this status, fall back to All.
+  useEffect(() => {
+    if (sport !== 'ALL' && !availableKey.split(',').includes(sport)) {
+      setSport('ALL')
+    }
+  }, [sport, availableKey])
+
+  const activeSport =
+    sport === 'ALL' || availableSports.includes(sport) ? sport : 'ALL'
   const bySport =
-    sport === 'ALL' ? games : games.filter((g) => g.sport === sport)
-  const filtered = filterByStatus(bySport, status)
-  const ranked = rankGames(filtered)
+    activeSport === 'ALL'
+      ? statusGames
+      : statusGames.filter((g) => g.sport === activeSport)
+  const ranked =
+    status === 'upcoming'
+      ? [...bySport].sort(
+          (a, b) => Date.parse(a.startTime) - Date.parse(b.startTime),
+        )
+      : rankGames(bySport)
 
   return (
     <div className="min-h-dvh w-full max-w-[100vw] overflow-x-hidden bg-zinc-100 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100">
@@ -108,14 +142,18 @@ export default function App() {
         <div className="border-b border-zinc-200/90 dark:border-zinc-700/90">
           <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
             <StatusTabs value={status} onChange={setStatus} />
-            <SportTabs value={sport} onChange={setSport} />
+            <SportTabs
+              value={activeSport}
+              onChange={setSport}
+              availableSports={availableSports}
+            />
           </div>
         </div>
         <main className="mx-auto w-full min-w-0 max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
           {loading ? (
             <LoadingList />
           ) : ranked.length === 0 ? (
-            <EmptyState sport={sport} status={status} />
+            <EmptyState sport={activeSport} status={status} />
           ) : (
             <ul className="grid w-full min-w-0 gap-4 sm:grid-cols-2">
               {ranked.map((game) => (

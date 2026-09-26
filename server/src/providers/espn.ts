@@ -63,6 +63,8 @@ export interface EspnGameSnapshot {
   awayMl?: number
   /** Live football down/distance/possession when ESPN provides it. */
   footballSituation?: EspnFootballSituation
+  /** National (or primary) TV/stream network, e.g. "ABC", "FOX", "Prime Video". */
+  broadcast?: string
 }
 
 interface ScoreboardEvent {
@@ -135,6 +137,17 @@ interface ScoreboardEvent {
       }
       homeTeamOdds?: { moneyLine?: number }
       awayTeamOdds?: { moneyLine?: number }
+    }>
+    /** Simple display string when present (e.g. "FOX", "Prime Video"). */
+    broadcast?: string
+    broadcasts?: Array<{
+      market?: string
+      names?: string[]
+    }>
+    geoBroadcasts?: Array<{
+      market?: { type?: string }
+      media?: { shortName?: string }
+      type?: { shortName?: string }
     }>
   }>
 }
@@ -362,6 +375,36 @@ function teamColor(raw?: string): string | undefined {
   return `#${hex.toLowerCase()}`
 }
 
+/** Prefer national TV/stream label from ESPN competition payload. */
+function broadcastLabel(
+  competition: ScoreboardEvent['competitions'][0],
+): string | undefined {
+  const direct = competition.broadcast?.trim()
+  if (direct) {
+    return direct
+  }
+
+  const national = competition.broadcasts?.find(
+    (b) => b.market?.toLowerCase() === 'national' && b.names?.[0]?.trim(),
+  )
+  const fromBroadcasts =
+    national?.names?.[0]?.trim() ||
+    competition.broadcasts?.find((b) => b.names?.[0]?.trim())?.names?.[0]?.trim()
+  if (fromBroadcasts) {
+    return fromBroadcasts
+  }
+
+  const geoNational = competition.geoBroadcasts?.find(
+    (g) =>
+      g.market?.type?.toLowerCase() === 'national' && g.media?.shortName?.trim(),
+  )
+  const fromGeo =
+    geoNational?.media?.shortName?.trim() ||
+    competition.geoBroadcasts?.find((g) => g.media?.shortName?.trim())?.media
+      ?.shortName?.trim()
+  return fromGeo || undefined
+}
+
 function moneylineFromScoreboardOdds(
   odds: ScoreboardEvent['competitions'][0]['odds'],
 ): { home: number; away: number } | null {
@@ -410,9 +453,13 @@ function moneylineFromCore(data: CoreOddsResponse): { home: number; away: number
 
 async function fetchScoreboardJson(
   path: EspnSportPath,
+  dates?: string,
 ): Promise<{ events?: ScoreboardEvent[] }> {
   let lastError: Error | null = null
   const search = new URLSearchParams(path.query ?? {})
+  if (dates) {
+    search.set('dates', dates)
+  }
   const qs = search.toString()
   const suffix = qs ? `?${qs}` : ''
 
@@ -433,13 +480,34 @@ async function fetchScoreboardJson(
   throw lastError ?? new Error(`ESPN scoreboard failed for ${path.sport}/${path.league}`)
 }
 
-export async function fetchEspnScoreboard(
+/** Calendar days in America/New_York as YYYYMMDD, starting today for `dayCount` days. */
+export function espnDateKeysEt(dayCount: number, now = new Date()): string[] {
+  const et = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now)
+  const [y, m, d] = et.split('-').map(Number)
+  const startUtc = Date.UTC(y!, m! - 1, d!)
+  const keys: string[] = []
+  for (let i = 0; i < dayCount; i++) {
+    const day = new Date(startUtc + i * 24 * 60 * 60 * 1000)
+    const yyyy = day.getUTCFullYear()
+    const mm = String(day.getUTCMonth() + 1).padStart(2, '0')
+    const dd = String(day.getUTCDate()).padStart(2, '0')
+    keys.push(`${yyyy}${mm}${dd}`)
+  }
+  return keys
+}
+
+function snapshotsFromEvents(
   path: EspnSportPath,
-): Promise<EspnGameSnapshot[]> {
-  const data = await fetchScoreboardJson(path)
+  events: ScoreboardEvent[] | undefined,
+): EspnGameSnapshot[] {
   const snapshots: EspnGameSnapshot[] = []
 
-  for (const event of data.events ?? []) {
+  for (const event of events ?? []) {
     const competition = event.competitions?.[0]
     if (!competition) {
       continue
@@ -475,6 +543,7 @@ export async function fetchEspnScoreboard(
     const awayRank = top25Rank(away.curatedRank?.current)
     const homeColor = teamColor(home.team.color)
     const awayColor = teamColor(away.team.color)
+    const broadcast = broadcastLabel(competition)
 
     snapshots.push({
       espnId: event.id,
@@ -503,10 +572,38 @@ export async function fetchEspnScoreboard(
       ...(delayed ? { delayed: true } : {}),
       ...(ml ? { homeMl: ml.home, awayMl: ml.away } : {}),
       ...(footballSituation ? { footballSituation } : {}),
+      ...(broadcast ? { broadcast } : {}),
     })
   }
 
   return snapshots
+}
+
+export async function fetchEspnScoreboard(
+  path: EspnSportPath,
+  options?: { dateKeys?: string[] },
+): Promise<EspnGameSnapshot[]> {
+  const dateKeys = options?.dateKeys
+  if (!dateKeys?.length) {
+    const data = await fetchScoreboardJson(path)
+    return snapshotsFromEvents(path, data.events)
+  }
+
+  const byId = new Map<string, EspnGameSnapshot>()
+  for (const dates of dateKeys) {
+    try {
+      const data = await fetchScoreboardJson(path, dates)
+      for (const snap of snapshotsFromEvents(path, data.events)) {
+        byId.set(snap.espnId, snap)
+      }
+    } catch (error) {
+      console.warn(
+        `[espn] scoreboard failed for ${path.sport}/${path.league} dates=${dates}`,
+        error,
+      )
+    }
+  }
+  return [...byId.values()]
 }
 
 /** Closing (or open) moneyline for a single ESPN event. Useful once games go live. */

@@ -1,6 +1,7 @@
 import { config } from '../config.js'
 import type { SportConfig } from '../types.js'
 import {
+  espnDateKeysEt,
   fetchEspnClosingMoneyline,
   fetchEspnScoreboard,
   matchKey,
@@ -14,6 +15,12 @@ interface CacheBucket {
 }
 
 const cache = new Map<string, CacheBucket>()
+
+/** How many ET calendar days of scoreboard to pull (today + upcoming horizon). */
+function scoreboardDayCount(): number {
+  const days = Math.ceil(config.upcomingHorizonMs / (24 * 60 * 60 * 1000)) + 1
+  return Math.min(4, Math.max(2, days))
+}
 
 async function loadSport(sport: SportConfig): Promise<CacheBucket> {
   const empty: CacheBucket = {
@@ -32,7 +39,8 @@ async function loadSport(sport: SportConfig): Promise<CacheBucket> {
   }
 
   try {
-    const fresh = await fetchEspnScoreboard(sport.espn)
+    const dateKeys = espnDateKeysEt(scoreboardDayCount())
+    const fresh = await fetchEspnScoreboard(sport.espn, { dateKeys })
     const prevById = new Map(
       (cached?.games ?? []).map((snap) => [snap.espnId, snap]),
     )

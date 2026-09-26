@@ -387,7 +387,7 @@ function WinChanceBlock({
             </span>
           ) : (
             <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
-              Close
+              Current
             </span>
           )}
         </div>
@@ -468,16 +468,26 @@ export function GameCard({ game }: GameCardProps) {
           : 'border-zinc-200 dark:border-zinc-700'
       }`}
     >
-      <div className="mb-3 flex min-w-0 flex-wrap items-center gap-2 text-sm text-zinc-500">
-        <span className="font-medium uppercase tracking-wide text-zinc-600 dark:text-zinc-400">
-          {game.league}
-        </span>
-        <span className="min-w-0 truncate text-zinc-500 dark:text-zinc-400">
-          {timeLabel}
-        </span>
-        {game.delayed && (
-          <span className="rounded border border-zinc-300 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:border-zinc-600 dark:text-zinc-300">
-            Delayed
+      <div className="mb-3 flex min-w-0 items-start justify-between gap-3 text-sm text-zinc-500">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <span className="font-medium uppercase tracking-wide text-zinc-600 dark:text-zinc-400">
+            {game.league}
+          </span>
+          <span className="min-w-0 truncate text-zinc-500 dark:text-zinc-400">
+            {timeLabel}
+          </span>
+          {game.delayed && (
+            <span className="rounded border border-zinc-300 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:border-zinc-600 dark:text-zinc-300">
+              Delayed
+            </span>
+          )}
+        </div>
+        {game.broadcast && (
+          <span
+            className="shrink-0 text-right text-xs font-semibold tracking-wide text-zinc-600 dark:text-zinc-300"
+            title={`Airing on ${game.broadcast}`}
+          >
+            {game.broadcast}
           </span>
         )}
       </div>

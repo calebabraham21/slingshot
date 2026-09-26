@@ -1,7 +1,8 @@
-export type StatusFilter = 'live' | 'final' | 'all'
+export type StatusFilter = 'live' | 'upcoming' | 'final' | 'all'
 
 const TABS: { id: StatusFilter; label: string }[] = [
   { id: 'live', label: 'Live' },
+  { id: 'upcoming', label: 'Upcoming' },
   { id: 'final', label: 'Final' },
   { id: 'all', label: 'All' },
 ]
