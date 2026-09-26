@@ -16,15 +16,6 @@ function formatKickoff(iso: string): string {
   })
 }
 
-function teamEmphasis(
-  showScore: boolean,
-  own: number,
-  other: number,
-): 'leader' | 'trailer' | 'tied' {
-  if (!showScore || own === other) return 'tied'
-  return own > other ? 'leader' : 'trailer'
-}
-
 function FootballIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -53,7 +44,6 @@ function TeamRow({
   score,
   isUnderdog,
   underdogMl,
-  emphasis,
   showScore,
   hasBall,
   rank,
@@ -64,35 +54,23 @@ function TeamRow({
   score: number
   isUnderdog: boolean
   underdogMl?: number
-  emphasis: 'leader' | 'trailer' | 'tied'
   showScore: boolean
   hasBall?: boolean
   rank?: number
   reserveRank?: boolean
 }) {
-  const bright = emphasis === 'leader' || emphasis === 'tied'
   return (
     <div className="flex items-center gap-3 px-0.5 py-1.5">
       {logo ? (
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100 sm:h-11 sm:w-11 dark:bg-zinc-700/80">
-          <img
-            src={logo}
-            alt=""
-            width={40}
-            height={40}
-            className={`h-8 w-8 object-contain sm:h-9 sm:w-9 ${
-              bright ? 'opacity-100' : 'opacity-45'
-            }`}
-          />
-        </span>
+        <img
+          src={logo}
+          alt=""
+          width={40}
+          height={40}
+          className="h-9 w-9 shrink-0 object-contain sm:h-10 sm:w-10"
+        />
       ) : (
-        <span
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-200 text-xs font-bold dark:bg-zinc-800 sm:h-11 sm:w-11 ${
-            bright
-              ? 'text-zinc-800 dark:text-zinc-100'
-              : 'text-zinc-500'
-          }`}
-        >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center text-xs font-bold text-zinc-800 sm:h-10 sm:w-10 dark:text-zinc-100">
           {name.slice(0, 1)}
         </span>
       )}
@@ -105,13 +83,7 @@ function TeamRow({
             {rank ?? ''}
           </span>
         )}
-        <span
-          className={`min-w-0 truncate text-base sm:text-[17px] ${
-            bright
-              ? 'font-semibold text-zinc-900 dark:text-zinc-50'
-              : 'font-medium text-zinc-500'
-          }`}
-        >
+        <span className="min-w-0 truncate text-base font-semibold text-zinc-900 sm:text-[17px] dark:text-zinc-50">
           {name}
         </span>
         {hasBall && (
@@ -126,13 +98,7 @@ function TeamRow({
         )}
       </div>
       {showScore && (
-        <span
-          className={`w-9 text-right tabular-nums sm:w-11 ${
-            bright
-              ? 'text-xl font-bold text-zinc-900 dark:text-zinc-50 sm:text-2xl'
-              : 'text-lg font-semibold text-zinc-500 sm:text-xl'
-          }`}
-        >
+        <span className="w-9 text-right text-xl font-bold tabular-nums text-zinc-900 sm:w-11 sm:text-2xl dark:text-zinc-50">
           {score}
         </span>
       )}
@@ -501,7 +467,6 @@ export function GameCard({ game }: GameCardProps) {
           underdogMl={
             game.underdogSide === 'away' ? underdogMl : undefined
           }
-          emphasis={teamEmphasis(showScore, game.away.score, game.home.score)}
           showScore={showScore}
           hasBall={situation?.possession === 'away'}
           rank={game.away.rank}
@@ -515,7 +480,6 @@ export function GameCard({ game }: GameCardProps) {
           underdogMl={
             game.underdogSide === 'home' ? underdogMl : undefined
           }
-          emphasis={teamEmphasis(showScore, game.home.score, game.away.score)}
           showScore={showScore}
           hasBall={situation?.possession === 'home'}
           rank={game.home.rank}
