@@ -1,4 +1,4 @@
-export type Sport = 'NBA' | 'NFL' | 'MLB' | 'NHL' | 'SOCCER'
+export type Sport = 'NBA' | 'NFL' | 'NCAAF' | 'MLB' | 'NHL' | 'SOCCER'
 
 export type GameStatus = 'pregame' | 'live' | 'final'
 

@@ -46,6 +46,12 @@ export const SPORTS: SportConfig[] = [
     espn: { sport: 'football', league: 'nfl' },
   },
   {
+    key: 'americanfootball_ncaaf',
+    sport: 'NCAAF',
+    league: 'NCAAF',
+    espn: { sport: 'football', league: 'college-football' },
+  },
+  {
     key: 'baseball_mlb',
     sport: 'MLB',
     league: 'MLB',

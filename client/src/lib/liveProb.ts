@@ -3,6 +3,7 @@ import type { Game, Sport } from '../types'
 /** Tunable sport margin volatility (final score differential SD). */
 export const MARGIN_SIGMA: Record<Sport, number> = {
   NFL: 13.5,
+  NCAAF: 15.5,
   NBA: 12,
   NHL: 2.3,
   MLB: 4.3,
@@ -11,6 +12,7 @@ export const MARGIN_SIGMA: Record<Sport, number> = {
 
 const PERIOD_SECONDS: Record<Sport, { periods: number; seconds: number }> = {
   NFL: { periods: 4, seconds: 15 * 60 },
+  NCAAF: { periods: 4, seconds: 15 * 60 },
   NBA: { periods: 4, seconds: 12 * 60 },
   NHL: { periods: 3, seconds: 20 * 60 },
   MLB: { periods: 9, seconds: 0 },

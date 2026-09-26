@@ -6,6 +6,7 @@ const TABS: { id: SportFilter; label: string }[] = [
   { id: 'ALL', label: 'All sports' },
   { id: 'NBA', label: 'NBA' },
   { id: 'NFL', label: 'NFL' },
+  { id: 'NCAAF', label: 'CFB' },
   { id: 'MLB', label: 'MLB' },
   { id: 'NHL', label: 'NHL' },
   { id: 'SOCCER', label: 'Soccer' },

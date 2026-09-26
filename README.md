@@ -1,6 +1,6 @@
 # Slingshot
 
-Lightweight web app that tracks pregame underdogs across NBA, NFL, MLB, NHL, and soccer, then ranks them in one live feed.
+Lightweight web app that tracks pregame underdogs across NBA, NFL, NCAAF, MLB, NHL, and soccer, then ranks them in one live feed.
 
 Pregame odds only. No live win probability model.
 
