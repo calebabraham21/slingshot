@@ -201,6 +201,7 @@ export function progressLabel(game: Game): ProgressLabel {
 
 /**
  * Estimate underdog win probability from pregame fair prob, lead, and time left.
+ * When Polymarket live market probs are present, prefer those over the model.
  * Soccer is approximate (ignores draws as a third outcome).
  */
 export function estimateUnderdogWinProb(game: Game): number {
@@ -215,6 +216,12 @@ export function estimateUnderdogWinProb(game: Game): number {
 
   if (game.status === 'pregame') {
     return pregame
+  }
+
+  if (game.liveMarketProb) {
+    return game.underdogSide === 'home'
+      ? game.liveMarketProb.home
+      : game.liveMarketProb.away
   }
 
   const progress = getGameProgress(game)

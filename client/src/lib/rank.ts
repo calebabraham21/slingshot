@@ -1,14 +1,14 @@
 import type { Game } from '../types'
 import { enrichGame } from './cardStatus'
-import { estimateUnderdogWinProb } from './liveProb'
+import { slingshotMeter } from './slingshotMeter'
 
 /**
- * Rank by underdog win chance (est.) high → low.
- * Same number shown on cards; applies on every filter/tab.
+ * Rank by “upset watch” score (slingshot meter): dog size × score situation × time.
+ * Pure live win% buries huge dogs that are merely competitive (e.g. +900 tied).
  */
 export function rankGames(games: Game[]): Game[] {
   const enriched = games.map(enrichGame)
   return [...enriched].sort(
-    (a, b) => estimateUnderdogWinProb(b) - estimateUnderdogWinProb(a),
+    (a, b) => slingshotMeter(b) - slingshotMeter(a),
   )
 }

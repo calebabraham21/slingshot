@@ -133,22 +133,6 @@ const rawGames: Array<
     pregameMoneyline: { home: 600, away: -900 },
     underdogSide: 'home',
   },
-  // Soccer still in it
-  {
-    id: 'soccer-live',
-    sport: 'SOCCER',
-    league: 'EPL',
-    startTime: '2026-09-20T18:30:00Z',
-    status: 'live',
-    period: 2,
-    clockSeconds: 23 * 60,
-    clock: "67'",
-    home: { name: 'Brighton', abbreviation: 'BHA', score: 1 },
-    away: { name: 'Manchester City', abbreviation: 'MCI', score: 1 },
-    pregameMoneyline: { home: 550, away: -200 },
-    drawProb: 0.22,
-    underdogSide: 'home',
-  },
   // Not started
   {
     id: 'mlb-pre',
@@ -185,22 +169,6 @@ const rawGames: Array<
     home: { name: 'Tennessee Titans', abbreviation: 'TEN', score: 27 },
     away: { name: 'Philadelphia Eagles', abbreviation: 'PHI', score: 20 },
     pregameMoneyline: { home: 340, away: -430 },
-    underdogSide: 'home',
-  },
-  // Final favorite held
-  {
-    id: 'soccer-final-held',
-    sport: 'SOCCER',
-    league: 'La Liga',
-    startTime: '2026-09-20T19:00:00Z',
-    status: 'final',
-    period: 2,
-    clockSeconds: 0,
-    clock: 'FT',
-    home: { name: 'Getafe', abbreviation: 'GET', score: 0 },
-    away: { name: 'Real Madrid', abbreviation: 'RMA', score: 2 },
-    pregameMoneyline: { home: 700, away: -250 },
-    drawProb: 0.2,
     underdogSide: 'home',
   },
 ]

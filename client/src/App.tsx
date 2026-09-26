@@ -8,7 +8,7 @@ import { rankGames } from './lib/rank'
 import { useTheme } from './lib/theme'
 import type { Game } from './types'
 
-const REFRESH_MS = 30_000
+const REFRESH_MS = 15_000
 
 function LoadingList() {
   return (
@@ -34,8 +34,7 @@ function EmptyState({
   sport: SportFilter
   status: StatusFilter
 }) {
-  const sportLabel =
-    sport === 'ALL' ? 'any sport' : sport === 'SOCCER' ? 'Soccer' : sport
+  const sportLabel = sport === 'ALL' ? 'any sport' : sport
   const statusLabel =
     status === 'live' ? 'live' : status === 'final' ? 'final' : ''
   return (

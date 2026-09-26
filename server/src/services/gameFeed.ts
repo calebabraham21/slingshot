@@ -1,32 +1,26 @@
 import { config, SPORTS } from '../config.js'
-import { fairProbs, impliedProbability, normalizeProbs } from '../lib/odds.js'
+import { americanFromProb } from '../lib/odds.js'
 import { rankGames } from '../lib/rank.js'
 import { deriveUnderdogState } from '../lib/underdogState.js'
 import { matchKey } from '../providers/espn.js'
-import { extractH2H, fetchOdds } from '../providers/oddsApi.js'
+import {
+  fetchPolymarketMoneylineAsOf,
+  fetchPolymarketMoneylines,
+  polymarketSportSupported,
+  type PolymarketMoneyline,
+} from '../providers/polymarket.js'
 import type { EspnGameSnapshot } from '../providers/espn.js'
 import type { Game, GameStatus, Side, SportConfig } from '../types.js'
-import { getEspnGames, resolveEspnMoneyline } from './espnScores.js'
-import { setFeedGames, setQuotaMeta } from './feedStore.js'
+import { getEspnGames } from './espnScores.js'
+import { setFeedGames } from './feedStore.js'
 import {
   getLockedOdds,
   lockOdds,
   lockedOddsCount,
+  type LockedOdds,
 } from './oddsLock.js'
 
-function trackQuota(meta: {
-  remainingRequests: number | null
-  usedRequests: number | null
-}) {
-  setQuotaMeta(meta)
-  if (meta.remainingRequests != null) {
-    console.log(
-      `[odds-api] used=${meta.usedRequests ?? '?'} remaining=${meta.remainingRequests}`,
-    )
-  }
-}
-
-/** True when this tipoff is inside the lock window (default: last 10 min before start). */
+/** True when tipoff is inside the Polymarket lock window (default: last 2 min). */
 export function isInOddsLockWindow(startTime: string, now = Date.now()): boolean {
   const msUntil = Date.parse(startTime) - now
   return (
@@ -35,40 +29,30 @@ export function isInOddsLockWindow(startTime: string, now = Date.now()): boolean
 }
 
 function statusFromEspn(state: EspnGameSnapshot['state']): GameStatus {
-  if (state === 'post') {
-    return 'final'
-  }
-  if (state === 'in') {
-    return 'live'
-  }
+  if (state === 'post') return 'final'
+  if (state === 'in') return 'live'
   return 'pregame'
+}
+
+function snapNames(snap: EspnGameSnapshot) {
+  return {
+    awayName: snap.awayName,
+    homeName: snap.homeName,
+    awayLabel: snap.awayLabel,
+    homeLabel: snap.homeLabel,
+    startTime: snap.startTime,
+  }
 }
 
 function buildGame(
   sport: SportConfig,
   snap: EspnGameSnapshot,
-  locked: { home: number; away: number; draw?: number },
+  locked: LockedOdds,
+  live: PolymarketMoneyline | null,
 ): Game | null {
   const status = statusFromEspn(snap.state)
-
-  let homeFair: number
-  let awayFair: number
-  let drawProb: number | undefined
-
-  if (locked.draw != null) {
-    const [h, a, d] = normalizeProbs([
-      impliedProbability(locked.home),
-      impliedProbability(locked.away),
-      impliedProbability(locked.draw),
-    ])
-    homeFair = h
-    awayFair = a
-    drawProb = d
-  } else {
-    const probs = fairProbs(locked.home, locked.away)
-    homeFair = probs.a
-    awayFair = probs.b
-  }
+  const homeFair = locked.home
+  const awayFair = locked.away
 
   const underdogSide: Side = homeFair <= awayFair ? 'home' : 'away'
   const underdogFair = underdogSide === 'home' ? homeFair : awayFair
@@ -87,6 +71,9 @@ function buildGame(
     favoriteScore,
   })
 
+  const liveHome = live?.home ?? homeFair
+  const liveAway = live?.away ?? awayFair
+
   return {
     id: `espn:${snap.espnId}`,
     sport: sport.sport,
@@ -98,123 +85,172 @@ function buildGame(
     ...(snap.clockSeconds != null ? { clockSeconds: snap.clockSeconds } : {}),
     ...(snap.delayed ? { delayed: true } : {}),
     home: {
-      name: snap.homeName,
+      name: snap.homeLabel,
       abbreviation: snap.homeAbbrev,
       score: snap.homeScore,
       ...(snap.homeLogo ? { logo: snap.homeLogo } : {}),
+      ...(snap.homeColor ? { color: snap.homeColor } : {}),
+      ...(snap.homeRank != null ? { rank: snap.homeRank } : {}),
     },
     away: {
-      name: snap.awayName,
+      name: snap.awayLabel,
       abbreviation: snap.awayAbbrev,
       score: snap.awayScore,
       ...(snap.awayLogo ? { logo: snap.awayLogo } : {}),
+      ...(snap.awayColor ? { color: snap.awayColor } : {}),
+      ...(snap.awayRank != null ? { rank: snap.awayRank } : {}),
     },
     pregameMoneyline: {
-      home: locked.home,
-      away: locked.away,
+      home: americanFromProb(homeFair),
+      away: americanFromProb(awayFair),
     },
     pregameFairProb: {
       home: homeFair,
       away: awayFair,
     },
-    ...(drawProb != null ? { drawProb } : {}),
     underdogSide,
     underdogState,
     ...(snap.footballSituation
       ? { footballSituation: snap.footballSituation }
       : {}),
+    ...(status !== 'pregame'
+      ? {
+          liveMarketProb: {
+            home: liveHome,
+            away: liveAway,
+            source: 'polymarket' as const,
+          },
+        }
+      : {}),
   }
 }
 
-async function ensureLock(
+async function ensurePolymarketLock(
   sport: SportConfig,
   snap: EspnGameSnapshot,
-): Promise<{ home: number; away: number; draw?: number } | undefined> {
+  current: PolymarketMoneyline | null,
+): Promise<LockedOdds | undefined> {
   const key = matchKey(snap.awayName, snap.homeName)
   const existing = getLockedOdds(key)
   if (existing) {
     return existing
   }
 
-  // Never call Odds API here. For already-live gaps only, seed ESPN closing ML.
-  if (snap.state === 'pre') {
-    return undefined
+  const lookup = {
+    sport: sport.sport,
+    ...snapNames(snap),
   }
 
-  const ml = await resolveEspnMoneyline(sport, snap)
-  if (!ml) {
-    return undefined
+  if (snap.state === 'pre' && isInOddsLockWindow(snap.startTime) && current) {
+    console.log(
+      `[polymarket] locked pregame ${snap.awayAbbrev} @ ${snap.homeAbbrev}: ` +
+        `${(current.away * 100).toFixed(1)}% / ${(current.home * 100).toFixed(1)}%`,
+    )
+    return lockOdds(
+      key,
+      { home: current.home, away: current.away },
+      { eventSlug: current.eventSlug },
+    )
   }
 
-  console.log(
-    `[espn] seeded closing ML for ${snap.awayAbbrev} @ ${snap.homeAbbrev}: ${ml.away}/${ml.home}`,
-  )
-  return lockOdds(key, ml, 'espn')
+  if (snap.state !== 'pre') {
+    const tipMs = Date.parse(snap.startTime)
+    if (Number.isFinite(tipMs)) {
+      const asOf = Math.floor((tipMs - 90_000) / 1000)
+      const hist = await fetchPolymarketMoneylineAsOf(lookup, asOf)
+      if (hist) {
+        console.log(
+          `[polymarket] backfilled close ${snap.awayAbbrev} @ ${snap.homeAbbrev}: ` +
+            `${(hist.away * 100).toFixed(1)}% / ${(hist.home * 100).toFixed(1)}%`,
+        )
+        return lockOdds(
+          key,
+          { home: hist.home, away: hist.away },
+          { eventSlug: hist.eventSlug },
+        )
+      }
+    }
+
+    if (current) {
+      console.log(
+        `[polymarket] seeded live close ${snap.awayAbbrev} @ ${snap.homeAbbrev} (no history)`,
+      )
+      return lockOdds(
+        key,
+        { home: current.home, away: current.away },
+        { eventSlug: current.eventSlug },
+      )
+    }
+  }
+
+  return undefined
 }
 
 /**
- * Rebuild the public feed from ESPN scores + existing locks.
+ * Rebuild the public feed from ESPN scores + Polymarket probs.
  * Safe to call on every poll. Does not call The Odds API.
  */
 export async function rebuildFeedFromCache(): Promise<void> {
   const espnSlates = await Promise.all(SPORTS.map((sport) => getEspnGames(sport)))
-  const games: Game[] = []
 
-  for (let index = 0; index < SPORTS.length; index++) {
-    const sport = SPORTS[index]
-    for (const snap of espnSlates[index]) {
-      const locked = await ensureLock(sport, snap)
-      if (!locked) {
-        continue
-      }
-      const game = buildGame(sport, snap, locked)
-      if (game) {
-        games.push(game)
-      }
-    }
+  type Candidate = {
+    id: string
+    sport: SportConfig
+    snap: EspnGameSnapshot
   }
 
-  setFeedGames(rankGames(games), { lockedOdds: lockedOddsCount() })
-}
+  const candidates: Candidate[] = []
 
-/**
- * Fetch Odds API only for sports that have an unlocked game inside the lock window.
- * Locks only those near-tip games (not the whole slate).
- */
-export async function lockImminentOdds(): Promise<void> {
-  for (const sport of SPORTS) {
-    const snaps = await getEspnGames(sport)
-    const needsFetch = snaps.some((snap) => {
-      if (getLockedOdds(matchKey(snap.awayName, snap.homeName))) {
-        return false
-      }
-      return isInOddsLockWindow(snap.startTime)
-    })
-
-    if (!needsFetch) {
+  for (let index = 0; index < SPORTS.length; index++) {
+    const sport = SPORTS[index]!
+    if (!polymarketSportSupported(sport.sport)) {
       continue
     }
 
-    console.log(`[odds-api] locking window hit for ${sport.league}`)
-    const { events, meta } = await fetchOdds(sport.key)
-    trackQuota(meta)
-
-    for (const event of events) {
-      if (!isInOddsLockWindow(event.commence_time)) {
+    for (const snap of espnSlates[index]!) {
+      const key = matchKey(snap.awayName, snap.homeName)
+      const alreadyLocked = getLockedOdds(key)
+      const nearTip =
+        snap.state === 'pre' && isInOddsLockWindow(snap.startTime)
+      const needsMarket =
+        alreadyLocked != null || nearTip || snap.state !== 'pre'
+      if (!needsMarket) {
         continue
       }
-      const prices = extractH2H(event)
-      if (!prices) {
-        continue
-      }
-      const key = matchKey(event.away_team, event.home_team)
-      if (getLockedOdds(key)) {
-        continue
-      }
-      lockOdds(key, prices, 'odds-api')
-      console.log(
-        `[odds-api] locked ${event.away_team} @ ${event.home_team}`,
-      )
+      candidates.push({
+        id: `espn:${snap.espnId}`,
+        sport,
+        snap,
+      })
     }
   }
+
+  const currentById = await fetchPolymarketMoneylines(
+    candidates.map(({ id, sport, snap }) => ({
+      id,
+      sport: sport.sport,
+      ...snapNames(snap),
+    })),
+  )
+
+  const games: Game[] = []
+  for (const { id, sport, snap } of candidates) {
+    const current = currentById.get(id) ?? null
+    const locked = await ensurePolymarketLock(sport, snap, current)
+    if (!locked) {
+      continue
+    }
+    const game = buildGame(sport, snap, locked, current)
+    if (game) {
+      games.push(game)
+    }
+  }
+
+  console.log(
+    `[polymarket] feed ${games.length} games (${lockedOddsCount()} locks, ${currentById.size} live markets)`,
+  )
+  setFeedGames(rankGames(games), { lockedOdds: lockedOddsCount() })
 }
+
+/** @deprecated Odds API removed — locks happen inside rebuildFeedFromCache. */
+export async function lockImminentOdds(): Promise<void> {}

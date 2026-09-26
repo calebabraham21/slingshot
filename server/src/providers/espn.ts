@@ -13,6 +13,8 @@ const ESPN_HOSTS = [
 export interface EspnSportPath {
   sport: string
   league: string
+  /** Optional ESPN scoreboard query params (e.g. groups=80 for FBS). */
+  query?: Record<string, string>
 }
 
 export interface EspnFootballSituation {
@@ -36,10 +38,19 @@ export interface EspnGameSnapshot {
   espnId: string
   homeName: string
   awayName: string
+  /** UI label (school name for CFB; usually same as homeName elsewhere). */
+  homeLabel: string
+  awayLabel: string
   homeAbbrev: string
   awayAbbrev: string
   homeLogo?: string
   awayLogo?: string
+  /** Primary team color from ESPN (#rrggbb). */
+  homeColor?: string
+  awayColor?: string
+  /** AP/curated poll rank when in the Top 25. */
+  homeRank?: number
+  awayRank?: number
   homeScore: number
   awayScore: number
   startTime: string
@@ -76,12 +87,21 @@ interface ScoreboardEvent {
     competitors: Array<{
       homeAway: 'home' | 'away'
       score?: string
+      curatedRank?: {
+        current?: number
+      }
       team: {
         id?: string
         displayName: string
+        shortDisplayName?: string
+        location?: string
+        name?: string
         abbreviation: string
         logo?: string
         logos?: Array<{ href?: string; rel?: string[] }>
+        /** Primary brand color as hex without '#'. */
+        color?: string
+        alternateColor?: string
       }
     }>
     situation?: {
@@ -311,6 +331,37 @@ function footballSituationFromCompetition(
   }
 }
 
+function top25Rank(raw: number | undefined): number | undefined {
+  if (raw == null || !Number.isFinite(raw)) {
+    return undefined
+  }
+  const rank = Math.round(raw)
+  return rank >= 1 && rank <= 25 ? rank : undefined
+}
+
+/** Prefer school/location for CFB; full display name for other sports. */
+function teamLabel(
+  team: ScoreboardEvent['competitions'][0]['competitors'][0]['team'],
+  league: string,
+): string {
+  if (league === 'college-football') {
+    return (
+      team.location?.trim() ||
+      team.shortDisplayName?.trim() ||
+      team.displayName
+    )
+  }
+  return team.displayName
+}
+
+/** Normalize ESPN team.color (hex without '#') to `#rrggbb`. */
+function teamColor(raw?: string): string | undefined {
+  if (!raw) return undefined
+  const hex = raw.replace(/^#/, '').trim()
+  if (!/^[0-9a-fA-F]{6}$/.test(hex)) return undefined
+  return `#${hex.toLowerCase()}`
+}
+
 function moneylineFromScoreboardOdds(
   odds: ScoreboardEvent['competitions'][0]['odds'],
 ): { home: number; away: number } | null {
@@ -361,9 +412,12 @@ async function fetchScoreboardJson(
   path: EspnSportPath,
 ): Promise<{ events?: ScoreboardEvent[] }> {
   let lastError: Error | null = null
+  const search = new URLSearchParams(path.query ?? {})
+  const qs = search.toString()
+  const suffix = qs ? `?${qs}` : ''
 
   for (const host of ESPN_HOSTS) {
-    const url = `${host}/apis/site/v2/sports/${path.sport}/${path.league}/scoreboard`
+    const url = `${host}/apis/site/v2/sports/${path.sport}/${path.league}/scoreboard${suffix}`
     try {
       const response = await fetch(url, { headers: ESPN_HEADERS })
       if (!response.ok) {
@@ -417,14 +471,25 @@ export async function fetchEspnScoreboard(
           )
         : undefined
 
+    const homeRank = top25Rank(home.curatedRank?.current)
+    const awayRank = top25Rank(away.curatedRank?.current)
+    const homeColor = teamColor(home.team.color)
+    const awayColor = teamColor(away.team.color)
+
     snapshots.push({
       espnId: event.id,
       homeName: home.team.displayName,
       awayName: away.team.displayName,
+      homeLabel: teamLabel(home.team, path.league),
+      awayLabel: teamLabel(away.team, path.league),
       homeAbbrev: home.team.abbreviation,
       awayAbbrev: away.team.abbreviation,
       homeLogo: teamLogo(home.team),
       awayLogo: teamLogo(away.team),
+      ...(homeColor ? { homeColor } : {}),
+      ...(awayColor ? { awayColor } : {}),
+      ...(homeRank != null ? { homeRank } : {}),
+      ...(awayRank != null ? { awayRank } : {}),
       homeScore: Number(home.score ?? 0),
       awayScore: Number(away.score ?? 0),
       startTime: competition.date ?? event.date ?? new Date().toISOString(),

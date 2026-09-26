@@ -9,22 +9,6 @@
   --font-display: 'Outfit', ui-sans-serif, system-ui, sans-serif;
 }
 
-:root {
-  --rock-idle: #d4d4d8;
-  --rock-active: #71717a;
-  --rock-hot: #c2410c;
-  --rock-shine: rgba(255, 255, 255, 0.35);
-  --rock-shine-idle: rgba(255, 255, 255, 0.12);
-}
-
-.dark {
-  --rock-idle: #3f3f46;
-  --rock-active: #a8a29e;
-  --rock-hot: #c2410c;
-  --rock-shine: rgba(255, 255, 255, 0.16);
-  --rock-shine-idle: rgba(255, 255, 255, 0.05);
-}
-
 html {
   color-scheme: light;
   overflow-x: hidden;

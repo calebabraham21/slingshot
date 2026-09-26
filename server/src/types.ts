@@ -19,6 +19,10 @@ export interface Team {
   abbreviation: string
   score: number
   logo?: string
+  /** Primary team color from ESPN (#rrggbb). */
+  color?: string
+  /** AP/curated Top 25 rank when available (1-25). */
+  rank?: number
 }
 
 /** Live football drive context from ESPN (NFL / NCAAF). */
@@ -60,6 +64,15 @@ export interface Game {
   underdogSide: Side
   underdogState: UnderdogState
   footballSituation?: FootballSituation
+  /**
+   * Live moneyline implied win probs from Polymarket when a matching market exists.
+   * Prefer this over the model estimate for display / ranking while live.
+   */
+  liveMarketProb?: {
+    home: number
+    away: number
+    source: 'polymarket'
+  }
 }
 
 export interface SportConfig {
@@ -69,5 +82,7 @@ export interface SportConfig {
   espn?: {
     sport: string
     league: string
+    /** Optional ESPN scoreboard query params (e.g. groups=80 for FBS). */
+    query?: Record<string, string>
   }
 }

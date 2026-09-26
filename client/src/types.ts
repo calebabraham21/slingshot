@@ -20,6 +20,10 @@ export interface Team {
   score: number
   /** ESPN CDN logo URL when available. */
   logo?: string
+  /** Primary team color from ESPN (#rrggbb). */
+  color?: string
+  /** AP/curated Top 25 rank when available (1-25). */
+  rank?: number
 }
 
 /** Live football drive context from ESPN (NFL / NCAAF). */
@@ -65,4 +69,13 @@ export interface Game {
   underdogSide: Side
   underdogState: UnderdogState
   footballSituation?: FootballSituation
+  /**
+   * Live moneyline implied win probs from Polymarket when available.
+   * Client prefers this over the model estimate for live win %.
+   */
+  liveMarketProb?: {
+    home: number
+    away: number
+    source: 'polymarket'
+  }
 }

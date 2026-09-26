@@ -7,9 +7,9 @@ import { estimateUnderdogWinProb, getGameProgress } from './liveProb'
  */
 export const SLINGSHOT_METER_WEIGHTS = {
   /** How much pregame dog size matters (lower fair prob => bigger dog) */
-  dogSize: 0.38,
-  /** How much current est. win chance matters */
-  liveChance: 0.37,
+  dogSize: 0.42,
+  /** How much current est. win chance matters when leading */
+  liveChance: 0.33,
   /** How much game progress matters when the dog is ahead */
   progressWhenLeading: 0.25,
   /** Cap used when mapping fair prob to size (fair at/below this is “max dog”) */
@@ -34,7 +34,7 @@ function underdogLead(game: Game): number {
   return dog - fav
 }
 
-/** 0-1: how big the pregame dog was. +230 scores higher than +145. */
+/** 0-1: how big the pregame dog was. +900 scores higher than +370. */
 export function dogSizeScore(game: Game): number {
   const fair = underdogFair(game)
   const { minDogFair, maxDogFair } = SLINGSHOT_METER_WEIGHTS
@@ -44,8 +44,8 @@ export function dogSizeScore(game: Game): number {
 }
 
 /**
- * Ultimate 0-100 Slingshot meter.
- * Combines dog size, live win chance (est.), and how late the lead is locked in.
+ * Ultimate 0-100 Slingshot meter / feed rank score.
+ * Combines dog size, live win chance (est.), and game situation.
  */
 export function slingshotMeter(game: Game): number {
   const size = dogSizeScore(game)
@@ -66,23 +66,24 @@ export function slingshotMeter(game: Game): number {
     return Math.round(size * 12 + live * 8)
   }
 
-  // Live
+  // Live — leading: classic upset-in-progress
   if (lead > 0) {
     const score =
       size * w.dogSize +
       live * w.liveChance +
       progress * w.progressWhenLeading
-    // Extra kick when a bigger dog is actually winning late
-    const kick = size * live * progress * 0.2
+    // Extra kick when a bigger dog is actually winning later
+    const kick = size * live * progress * 0.22
     return Math.round(clamp01(score + kick) * 100)
   }
 
+  // Tied: huge dogs hanging around are headline material even if win% is still low
   if (lead === 0) {
-    const score = size * 0.4 + live * 0.45 + progress * 0.15
-    return Math.round(clamp01(score) * 85)
+    const score = size * 0.52 + live * 0.28 + progress * 0.2
+    return Math.round(clamp01(score) * 90)
   }
 
-  // Trailing: meter reflects remaining hope * dog size
-  const score = size * 0.3 + live * 0.55 + (1 - progress) * live * 0.15
-  return Math.round(clamp01(score) * 70)
+  // Trailing: remaining hope × dog size (close games stay visible)
+  const score = size * 0.35 + live * 0.5 + (1 - progress) * live * 0.15
+  return Math.round(clamp01(score) * 72)
 }

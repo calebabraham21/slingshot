@@ -9,6 +9,15 @@ export function impliedProbability(moneyline: number): number {
   return Math.abs(moneyline) / (Math.abs(moneyline) + 100)
 }
 
+/** Convert a vig-free win probability (0-1) to an American moneyline. */
+export function americanFromProb(prob: number): number {
+  const p = Math.min(0.99, Math.max(0.01, prob))
+  if (p >= 0.5) {
+    return Math.round((-100 * p) / (1 - p))
+  }
+  return Math.round((100 * (1 - p)) / p)
+}
+
 /** Convert two moneylines to fair (vig-free) probabilities that sum to 1. */
 export function fairProbs(
   mlA: number,

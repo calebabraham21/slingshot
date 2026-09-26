@@ -9,7 +9,6 @@ const TABS: { id: SportFilter; label: string }[] = [
   { id: 'NCAAF', label: 'CFB' },
   { id: 'MLB', label: 'MLB' },
   { id: 'NHL', label: 'NHL' },
-  { id: 'SOCCER', label: 'Soccer' },
 ]
 
 interface SportTabsProps {

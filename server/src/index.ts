@@ -17,7 +17,7 @@ app.get('/health', (_req, res) => {
   res.json({ ok: true })
 })
 
-/** Serves the last computed feed only. Never calls The Odds API. */
+/** Serves the last computed feed only. Never hits paid odds APIs. */
 app.get('/games', (_req, res) => {
   const { games, meta } = getFeedSnapshot()
   res.json({

@@ -2,9 +2,6 @@ import type { FootballSituation, Game } from '../types'
 import { formatMoneyline } from '../lib/odds'
 import { deriveCardStatus } from '../lib/cardStatus'
 import { estimateUnderdogWinProb } from '../lib/liveProb'
-import { slingshotMeter } from '../lib/slingshotMeter'
-import { StateBadge } from './StateBadge'
-import { SlingshotMeter } from './SlingshotMeter'
 
 interface GameCardProps {
   game: Game
@@ -59,6 +56,8 @@ function TeamRow({
   emphasis,
   showScore,
   hasBall,
+  rank,
+  reserveRank,
 }: {
   name: string
   logo?: string
@@ -68,6 +67,8 @@ function TeamRow({
   emphasis: 'leader' | 'trailer' | 'tied'
   showScore: boolean
   hasBall?: boolean
+  rank?: number
+  reserveRank?: boolean
 }) {
   const bright = emphasis === 'leader' || emphasis === 'tied'
   return (
@@ -96,8 +97,16 @@ function TeamRow({
         </span>
       )}
       <div className="flex min-w-0 flex-1 items-center gap-2">
+        {reserveRank && (
+          <span
+            className="inline-flex w-6 shrink-0 justify-center text-[11px] font-bold tabular-nums text-zinc-800 dark:text-zinc-100"
+            title={rank != null ? `Rank ${rank}` : undefined}
+          >
+            {rank ?? ''}
+          </span>
+        )}
         <span
-          className={`truncate text-base sm:text-[17px] ${
+          className={`min-w-0 truncate text-base sm:text-[17px] ${
             bright
               ? 'font-semibold text-zinc-900 dark:text-zinc-50'
               : 'font-medium text-zinc-500'
@@ -112,7 +121,7 @@ function TeamRow({
         )}
         {isUnderdog && underdogMl != null && (
           <span className="shrink-0 rounded border border-zinc-300 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-zinc-600 dark:border-zinc-600 dark:text-zinc-300">
-            DOG {formatMoneyline(underdogMl)}
+            {formatMoneyline(underdogMl)}
           </span>
         )}
       </div>
@@ -131,42 +140,61 @@ function TeamRow({
   )
 }
 
+function footballIdleLabel(game: Game): string {
+  if (game.status === 'final') return 'Final'
+  if (game.delayed) return 'Delayed'
+  const clock = (game.clock ?? '').toLowerCase()
+  if (clock.includes('half')) return 'Halftime'
+  if (clock.includes('end of') || clock.includes('end of quarter')) {
+    return 'End of quarter'
+  }
+  if (clock.includes('two-minute') || clock.includes('2-minute')) {
+    return 'Two-minute warning'
+  }
+  return 'No active drive'
+}
+
 function FootballSituationBlock({
   situation,
+  idleLabel,
   awayAbbrev,
   homeAbbrev,
+  awayColor,
+  homeColor,
 }: {
-  situation: FootballSituation
+  situation?: FootballSituation
+  idleLabel?: string
   awayAbbrev: string
   homeAbbrev: string
+  awayColor?: string
+  homeColor?: string
 }) {
-  const down =
-    situation.shortDownDistanceText ?? situation.downDistanceText
-  const spot = situation.possessionText
+  const active = situation != null
+  const down = active
+    ? (situation.shortDownDistanceText ?? situation.downDistanceText)
+    : (idleLabel ?? 'No active drive')
+  const spot = active ? situation.possessionText : undefined
 
   // ESPN yardLine is yards from the HOME goal. UI: away end left, home end right.
   const toLeftPct = (fromHomeGoal: number) =>
     Math.min(100, Math.max(0, 100 - fromHomeGoal))
 
   const ballLeftRaw =
-    situation.ballYardline != null
+    active && situation.ballYardline != null
       ? toLeftPct(situation.ballYardline)
       : null
-  // Keep the marker inside the field so arrows don't spill past the card edge.
   const ballLeft =
     ballLeftRaw == null ? null : Math.min(96, Math.max(4, ballLeftRaw))
   let startLeft =
-    situation.driveStartYardline != null
+    active && situation.driveStartYardline != null
       ? toLeftPct(situation.driveStartYardline)
       : null
   if (startLeft != null) {
     startLeft = Math.min(96, Math.max(4, startLeft))
   }
 
-  // Away attacks right (home end); home attacks left (away end).
-  const arrowPointsRight = situation.possession === 'away'
+  const arrowPointsRight = situation?.possession === 'away'
 
-  // Only draw a drive path when start → ball matches attack direction.
   if (ballLeft != null && startLeft != null) {
     const movingRight = ballLeft > startLeft + 1.5
     const movingLeft = ballLeft < startLeft - 1.5
@@ -188,21 +216,27 @@ function FootballSituationBlock({
     ? Math.abs(ballLeft! - startLeft!)
     : 0
 
+  const hasTeamColors = Boolean(awayColor && homeColor)
+  const fieldBackground =
+    'linear-gradient(90deg, #166534 0%, #15803d 12%, #16a34a 50%, #15803d 88%, #166534 100%)'
+
   return (
     <div className="mt-3 w-full border-t border-zinc-200 pt-2.5 dark:border-zinc-700">
-      <div className="mb-2 flex w-full justify-center">
+      <div className="mb-2 flex min-h-[28px] w-full items-center justify-center">
         <p
           className={`text-center text-sm font-semibold ${
-            situation.isRedZone
+            active && situation.isRedZone
               ? 'rounded bg-red-600 px-2 py-0.5 text-white'
-              : 'text-zinc-800 dark:text-zinc-100'
+              : active
+                ? 'text-zinc-800 dark:text-zinc-100'
+                : 'font-medium text-zinc-500 dark:text-zinc-400'
           }`}
         >
           {down}
           {spot ? (
             <span
               className={
-                situation.isRedZone
+                situation?.isRedZone
                   ? 'font-normal text-white/85'
                   : 'font-normal text-zinc-500 dark:text-zinc-400'
               }
@@ -225,19 +259,34 @@ function FootballSituationBlock({
 
         <div
           className="relative h-10 min-w-0 flex-1 overflow-hidden rounded-md border border-emerald-800/40"
-          style={{
-            background:
-              'linear-gradient(90deg, #166534 0%, #15803d 12%, #16a34a 50%, #15803d 88%, #166534 100%)',
-          }}
+          style={{ background: fieldBackground }}
           role="img"
-          aria-label={`Field position: ${down}${spot ? ` at ${spot}` : ''}. ${awayAbbrev} left, ${homeAbbrev} right.`}
+          aria-label={
+            active
+              ? `Field position: ${down}${spot ? ` at ${spot}` : ''}. ${awayAbbrev} left, ${homeAbbrev} right.`
+              : `${idleLabel ?? 'No active drive'}. ${awayAbbrev} left, ${homeAbbrev} right.`
+          }
         >
+          {hasTeamColors && (
+            <>
+              <div
+                className="pointer-events-none absolute inset-y-0 left-0 w-[10%]"
+                style={{ backgroundColor: awayColor }}
+                aria-hidden="true"
+              />
+              <div
+                className="pointer-events-none absolute inset-y-0 right-0 w-[10%]"
+                style={{ backgroundColor: homeColor }}
+                aria-hidden="true"
+              />
+            </>
+          )}
+
           {/* Yard hash marks */}
           <div className="pointer-events-none absolute inset-y-0 left-[25%] w-px bg-white/25" />
           <div className="pointer-events-none absolute inset-y-0 left-1/2 w-px bg-white/40" />
           <div className="pointer-events-none absolute inset-y-0 left-[75%] w-px bg-white/25" />
 
-          {/* Drive progress */}
           {hasDrivePath && pathLeft != null && (
             <div
               className="absolute top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-amber-300/90 shadow-sm"
@@ -248,7 +297,6 @@ function FootballSituationBlock({
             />
           )}
 
-          {/* Drive start tick */}
           {startLeft != null && (
             <div
               className="absolute top-1/2 h-3 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/80"
@@ -257,7 +305,6 @@ function FootballSituationBlock({
             />
           )}
 
-          {/* Ball + direction */}
           {ballLeft != null && (
             <div
               className="absolute top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center"
@@ -290,11 +337,15 @@ function FootballSituationBlock({
         </span>
       </div>
 
-      {situation.driveSummary ? (
-        <p className="mt-1.5 w-full text-center text-xs leading-relaxed text-zinc-500">
+      {active && situation.driveSummary ? (
+        <p className="mt-1.5 min-h-[1rem] w-full text-center text-xs leading-relaxed text-zinc-500">
           Drive: {situation.driveSummary}
         </p>
-      ) : null}
+      ) : (
+        <p className="mt-1.5 min-h-[1rem] w-full text-center text-xs leading-relaxed text-transparent">
+          &nbsp;
+        </p>
+      )}
     </div>
   )
 }
@@ -313,45 +364,74 @@ function WinChanceBlock({
   const delta = livePct - prePct
   const fill = Math.min(100, Math.max(0, livePct))
   const tick = Math.min(100, Math.max(0, prePct))
+  const deltaLabel =
+    delta > 0 ? `+${delta}` : delta < 0 ? `${delta}` : '0'
+  const deltaTone =
+    delta > 0
+      ? 'text-emerald-700 dark:text-emerald-300'
+      : delta < 0
+        ? 'text-rose-700/80 dark:text-rose-300/80'
+        : 'text-zinc-500'
 
   return (
-    <div className="mt-4 min-w-0 border-t border-zinc-200 pt-3 dark:border-zinc-700">
-      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
-        <div className="min-w-0">
-          <div className="text-3xl font-bold tabular-nums tracking-tight text-zinc-900 dark:text-zinc-50">
-            {livePct}%
-          </div>
-          <div className="mt-0.5 text-xs text-zinc-500">
-            Underdog win chance (est.)
-          </div>
-        </div>
-        {showDelta && (
-          <div
-            className={`min-w-0 text-sm font-medium tabular-nums sm:shrink-0 sm:text-right ${
-              delta > 0
-                ? 'text-emerald-700 dark:text-emerald-300'
-                : delta < 0
-                  ? 'text-zinc-500 dark:text-zinc-400'
-                  : 'text-zinc-500'
-            }`}
-          >
-            {delta > 0 ? '↑' : delta < 0 ? '↓' : '·'} {Math.abs(delta)}%
-            <span className="ml-1 text-zinc-400 dark:text-zinc-600">
-              {prePct}% to {livePct}%
+    <div className="mt-3 min-w-0 border-t border-zinc-200 pt-2.5 dark:border-zinc-700">
+      {/* One shared column so labels, numbers, and bar share the same edges */}
+      <div className="mx-auto w-full max-w-sm min-w-0">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+            Win chance
+          </span>
+          {showDelta ? (
+            <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+              vs close
             </span>
+          ) : (
+            <span className="text-[11px] font-medium uppercase tracking-wide text-zinc-500">
+              Close
+            </span>
+          )}
+        </div>
+
+        <div className="mt-0.5 flex items-baseline justify-between gap-3">
+          <div className="min-w-0 flex items-baseline gap-1.5 tabular-nums text-zinc-500">
+            {showDelta ? (
+              <>
+                <span className="text-sm">{prePct}%</span>
+                <span className="text-zinc-400 dark:text-zinc-500" aria-hidden>
+                  →
+                </span>
+                <span className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                  {livePct}%
+                </span>
+              </>
+            ) : (
+              <span className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+                {livePct}%
+              </span>
+            )}
           </div>
-        )}
-      </div>
-      <div className="relative mt-2.5 h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
-        <div
-          className="h-full rounded-full bg-zinc-800 dark:bg-zinc-200"
-          style={{ width: `${fill}%` }}
-        />
-        <div
-          className="absolute top-0 h-full w-0.5 bg-zinc-400 dark:bg-zinc-500"
-          style={{ left: `calc(${tick}% - 1px)` }}
-          title={`Pregame ${prePct}%`}
-        />
+          {showDelta && (
+            <div
+              className={`shrink-0 text-2xl font-bold tabular-nums tracking-tight ${deltaTone}`}
+            >
+              {deltaLabel}
+            </div>
+          )}
+        </div>
+
+        <div className="relative mt-2 h-2 w-full overflow-hidden rounded-full border border-zinc-300 bg-zinc-100 dark:border-zinc-500 dark:bg-zinc-900/80">
+          <div
+            className="h-full rounded-full bg-zinc-800 dark:bg-zinc-100"
+            style={{ width: `${fill}%` }}
+          />
+          {showDelta && (
+            <div
+              className="absolute top-0 h-full w-0.5 bg-zinc-500 dark:bg-amber-300/90"
+              style={{ left: `calc(${tick}% - 1px)` }}
+              title={`Close ${prePct}%`}
+            />
+          )}
+        </div>
       </div>
     </div>
   )
@@ -368,9 +448,12 @@ export function GameCard({ game }: GameCardProps) {
       ? game.pregameFairProb.home
       : game.pregameFairProb.away
   const liveChance = estimateUnderdogWinProb(game)
-  const meter = slingshotMeter(game)
   const showScore = game.status !== 'pregame'
   const situation = game.footballSituation
+  const reserveRank = game.home.rank != null || game.away.rank != null
+  const showFootballField =
+    (game.sport === 'NFL' || game.sport === 'NCAAF') &&
+    game.status !== 'pregame'
 
   const timeLabel =
     game.status === 'pregame'
@@ -385,23 +468,18 @@ export function GameCard({ game }: GameCardProps) {
           : 'border-zinc-200 dark:border-zinc-700'
       }`}
     >
-      <div className="mb-3 flex min-w-0 items-start justify-between gap-2 sm:items-center sm:gap-3">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-sm text-zinc-500">
-          <span className="font-medium uppercase tracking-wide text-zinc-600 dark:text-zinc-400">
-            {game.league}
+      <div className="mb-3 flex min-w-0 flex-wrap items-center gap-2 text-sm text-zinc-500">
+        <span className="font-medium uppercase tracking-wide text-zinc-600 dark:text-zinc-400">
+          {game.league}
+        </span>
+        <span className="min-w-0 truncate text-zinc-500 dark:text-zinc-400">
+          {timeLabel}
+        </span>
+        {game.delayed && (
+          <span className="rounded border border-zinc-300 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:border-zinc-600 dark:text-zinc-300">
+            Delayed
           </span>
-          <span className="min-w-0 truncate text-zinc-500 dark:text-zinc-400">
-            {timeLabel}
-          </span>
-          {game.delayed && (
-            <span className="rounded border border-zinc-300 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:border-zinc-600 dark:text-zinc-300">
-              Delayed
-            </span>
-          )}
-        </div>
-        <div className="shrink-0">
-          <StateBadge label={status.label} tone={status.tone} />
-        </div>
+        )}
       </div>
 
       <div className="space-y-0.5">
@@ -416,6 +494,8 @@ export function GameCard({ game }: GameCardProps) {
           emphasis={teamEmphasis(showScore, game.away.score, game.home.score)}
           showScore={showScore}
           hasBall={situation?.possession === 'away'}
+          rank={game.away.rank}
+          reserveRank={reserveRank}
         />
         <TeamRow
           name={game.home.name}
@@ -428,14 +508,19 @@ export function GameCard({ game }: GameCardProps) {
           emphasis={teamEmphasis(showScore, game.home.score, game.away.score)}
           showScore={showScore}
           hasBall={situation?.possession === 'home'}
+          rank={game.home.rank}
+          reserveRank={reserveRank}
         />
       </div>
 
-      {situation && (
+      {showFootballField && (
         <FootballSituationBlock
           situation={situation}
+          idleLabel={situation ? undefined : footballIdleLabel(game)}
           awayAbbrev={game.away.abbreviation}
           homeAbbrev={game.home.abbreviation}
+          awayColor={game.away.color}
+          homeColor={game.home.color}
         />
       )}
 
@@ -444,8 +529,6 @@ export function GameCard({ game }: GameCardProps) {
         live={game.status === 'pregame' ? pregame : liveChance}
         showDelta={game.status !== 'pregame'}
       />
-
-      <SlingshotMeter value={meter} />
     </article>
   )
 }
