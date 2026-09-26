@@ -9,7 +9,7 @@ const ROCK_PATHS = [
 ]
 
 /** Small → large across the card (horizontal cone). */
-const ROCK_SIZES = [14, 18, 24, 30, 38, 46]
+const ROCK_SIZES = [12, 16, 20, 26, 32, 38]
 
 function RockSvg({
   path,
@@ -65,10 +65,10 @@ export function SlingshotMeter({ value }: SlingshotMeterProps) {
   const hot = fill >= 75
 
   return (
-    <div className="mt-3">
+    <div className="mt-3 min-w-0">
       <div className="mb-1.5 text-xs text-zinc-500">Slingshot meter</div>
       <div
-        className="grid w-full grid-cols-6 items-center"
+        className="grid w-full min-w-0 grid-cols-6 items-center"
         role="meter"
         aria-label="Slingshot meter"
         aria-valuenow={fill}
@@ -76,7 +76,7 @@ export function SlingshotMeter({ value }: SlingshotMeterProps) {
         aria-valuemax={100}
       >
         {ROCK_SIZES.map((size, i) => (
-          <div key={i} className="flex items-center justify-center">
+          <div key={i} className="flex min-w-0 items-center justify-center">
             <RockSvg
               path={ROCK_PATHS[i]!}
               size={size}

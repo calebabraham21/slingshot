@@ -14,7 +14,7 @@ interface StatusTabsProps {
 export function StatusTabs({ value, onChange }: StatusTabsProps) {
   return (
     <div
-      className="inline-flex rounded-lg border border-zinc-200 bg-white p-1 dark:border-zinc-700 dark:bg-zinc-800"
+      className="flex max-w-full min-w-0 overflow-x-auto rounded-lg border border-zinc-200 bg-white p-1 scrollbar-none dark:border-zinc-700 dark:bg-zinc-800"
       role="tablist"
       aria-label="Filter by game status"
     >
@@ -27,7 +27,7 @@ export function StatusTabs({ value, onChange }: StatusTabsProps) {
             role="tab"
             aria-selected={active}
             onClick={() => onChange(tab.id)}
-            className={`inline-flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors ${
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors sm:px-3.5 ${
               active
                 ? 'bg-zinc-900 text-zinc-50 dark:bg-zinc-100 dark:text-zinc-900'
                 : 'text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-200'

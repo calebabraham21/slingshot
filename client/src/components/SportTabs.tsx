@@ -20,7 +20,7 @@ interface SportTabsProps {
 export function SportTabs({ value, onChange }: SportTabsProps) {
   return (
     <div
-      className="flex gap-1 overflow-x-auto scrollbar-none"
+      className="-mx-4 flex max-w-[100vw] gap-1 overflow-x-auto px-4 scrollbar-none sm:mx-0 sm:max-w-none sm:px-0"
       role="tablist"
       aria-label="Filter by sport"
     >

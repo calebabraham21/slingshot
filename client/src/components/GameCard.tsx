@@ -148,14 +148,20 @@ function FootballSituationBlock({
   const toLeftPct = (fromHomeGoal: number) =>
     Math.min(100, Math.max(0, 100 - fromHomeGoal))
 
-  const ballLeft =
+  const ballLeftRaw =
     situation.ballYardline != null
       ? toLeftPct(situation.ballYardline)
       : null
+  // Keep the marker inside the field so arrows don't spill past the card edge.
+  const ballLeft =
+    ballLeftRaw == null ? null : Math.min(96, Math.max(4, ballLeftRaw))
   let startLeft =
     situation.driveStartYardline != null
       ? toLeftPct(situation.driveStartYardline)
       : null
+  if (startLeft != null) {
+    startLeft = Math.min(96, Math.max(4, startLeft))
+  }
 
   // Away attacks right (home end); home attacks left (away end).
   const arrowPointsRight = situation.possession === 'away'
@@ -309,9 +315,9 @@ function WinChanceBlock({
   const tick = Math.min(100, Math.max(0, prePct))
 
   return (
-    <div className="mt-4 border-t border-zinc-200 pt-3 dark:border-zinc-700">
-      <div className="flex items-end justify-between gap-3">
-        <div>
+    <div className="mt-4 min-w-0 border-t border-zinc-200 pt-3 dark:border-zinc-700">
+      <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
+        <div className="min-w-0">
           <div className="text-3xl font-bold tabular-nums tracking-tight text-zinc-900 dark:text-zinc-50">
             {livePct}%
           </div>
@@ -321,7 +327,7 @@ function WinChanceBlock({
         </div>
         {showDelta && (
           <div
-            className={`shrink-0 text-sm font-medium tabular-nums ${
+            className={`min-w-0 text-sm font-medium tabular-nums sm:shrink-0 sm:text-right ${
               delta > 0
                 ? 'text-emerald-700 dark:text-emerald-300'
                 : delta < 0
@@ -373,18 +379,18 @@ export function GameCard({ game }: GameCardProps) {
 
   return (
     <article
-      className={`rounded-xl border bg-white px-4 py-4 shadow-sm sm:px-5 sm:py-5 dark:bg-zinc-800 dark:shadow-none ${
+      className={`min-w-0 overflow-hidden rounded-xl border bg-white px-3 py-4 shadow-sm sm:px-5 sm:py-5 dark:bg-zinc-800 dark:shadow-none ${
         status.state === 'upset_in_progress'
           ? 'upset-hot border-emerald-400/80 dark:border-emerald-700/70'
           : 'border-zinc-200 dark:border-zinc-700'
       }`}
     >
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-zinc-500">
+      <div className="mb-3 flex min-w-0 items-start justify-between gap-2 sm:items-center sm:gap-3">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-sm text-zinc-500">
           <span className="font-medium uppercase tracking-wide text-zinc-600 dark:text-zinc-400">
             {game.league}
           </span>
-          <span className="truncate text-zinc-500 dark:text-zinc-400">
+          <span className="min-w-0 truncate text-zinc-500 dark:text-zinc-400">
             {timeLabel}
           </span>
           {game.delayed && (
@@ -393,7 +399,9 @@ export function GameCard({ game }: GameCardProps) {
             </span>
           )}
         </div>
-        <StateBadge label={status.label} tone={status.tone} />
+        <div className="shrink-0">
+          <StateBadge label={status.label} tone={status.tone} />
+        </div>
       </div>
 
       <div className="space-y-0.5">

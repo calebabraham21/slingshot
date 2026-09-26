@@ -103,24 +103,24 @@ export default function App() {
   const ranked = rankGames(filtered)
 
   return (
-    <div className="min-h-dvh bg-zinc-100 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100">
-      <div className="relative">
+    <div className="min-h-dvh w-full max-w-[100vw] overflow-x-hidden bg-zinc-100 text-zinc-900 dark:bg-zinc-900 dark:text-zinc-100">
+      <div className="relative w-full min-w-0">
         <Header theme={theme} onToggleTheme={toggleTheme} />
         <div className="border-b border-zinc-200/90 dark:border-zinc-700/90">
-          <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+          <div className="mx-auto flex w-full min-w-0 max-w-6xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
             <StatusTabs value={status} onChange={setStatus} />
             <SportTabs value={sport} onChange={setSport} />
           </div>
         </div>
-        <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        <main className="mx-auto w-full min-w-0 max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
           {loading ? (
             <LoadingList />
           ) : ranked.length === 0 ? (
             <EmptyState sport={sport} status={status} />
           ) : (
-            <ul className="grid gap-4 sm:grid-cols-2">
+            <ul className="grid w-full min-w-0 gap-4 sm:grid-cols-2">
               {ranked.map((game) => (
-                <li key={game.id}>
+                <li key={game.id} className="min-w-0">
                   <GameCard game={game} />
                 </li>
               ))}
