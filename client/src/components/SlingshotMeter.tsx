@@ -22,7 +22,11 @@ function RockSvg({
   active: boolean
   hot: boolean
 }) {
-  const fill = !active ? '#3f3f46' : hot ? '#c2410c' : '#a8a29e'
+  const fill = !active
+    ? 'var(--rock-idle)'
+    : hot
+      ? 'var(--rock-hot)'
+      : 'var(--rock-active)'
 
   return (
     <svg
@@ -38,7 +42,7 @@ function RockSvg({
         cy="14"
         rx="5"
         ry="3.2"
-        fill={active ? 'rgba(255,255,255,0.16)' : 'rgba(255,255,255,0.05)'}
+        fill={active ? 'var(--rock-shine)' : 'var(--rock-shine-idle)'}
         transform="rotate(-28 15.5 14)"
       />
     </svg>

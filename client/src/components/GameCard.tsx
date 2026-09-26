@@ -60,8 +60,10 @@ function TeamRow({
         />
       ) : (
         <span
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-xs font-bold sm:h-11 sm:w-11 ${
-            bright ? 'text-zinc-100' : 'text-zinc-500'
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-200 text-xs font-bold dark:bg-zinc-800 sm:h-11 sm:w-11 ${
+            bright
+              ? 'text-zinc-800 dark:text-zinc-100'
+              : 'text-zinc-500'
           }`}
         >
           {name.slice(0, 1)}
@@ -71,14 +73,14 @@ function TeamRow({
         <span
           className={`truncate text-base sm:text-[17px] ${
             bright
-              ? 'font-semibold text-zinc-50'
+              ? 'font-semibold text-zinc-900 dark:text-zinc-50'
               : 'font-medium text-zinc-500'
           }`}
         >
           {name}
         </span>
         {isUnderdog && underdogMl != null && (
-          <span className="shrink-0 rounded border border-zinc-600 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-zinc-300">
+          <span className="shrink-0 rounded border border-zinc-300 px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-zinc-600 dark:border-zinc-600 dark:text-zinc-300">
             DOG {formatMoneyline(underdogMl)}
           </span>
         )}
@@ -87,7 +89,7 @@ function TeamRow({
         <span
           className={`w-9 text-right tabular-nums sm:w-11 ${
             bright
-              ? 'text-xl font-bold text-zinc-50 sm:text-2xl'
+              ? 'text-xl font-bold text-zinc-900 dark:text-zinc-50 sm:text-2xl'
               : 'text-lg font-semibold text-zinc-500 sm:text-xl'
           }`}
         >
@@ -114,10 +116,10 @@ function WinChanceBlock({
   const tick = Math.min(100, Math.max(0, prePct))
 
   return (
-    <div className="mt-4 border-t border-zinc-800 pt-3">
+    <div className="mt-4 border-t border-zinc-200 pt-3 dark:border-zinc-800">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <div className="text-3xl font-bold tabular-nums tracking-tight text-zinc-50">
+          <div className="text-3xl font-bold tabular-nums tracking-tight text-zinc-900 dark:text-zinc-50">
             {livePct}%
           </div>
           <div className="mt-0.5 text-xs text-zinc-500">
@@ -128,26 +130,26 @@ function WinChanceBlock({
           <div
             className={`shrink-0 text-sm font-medium tabular-nums ${
               delta > 0
-                ? 'text-emerald-300'
+                ? 'text-emerald-700 dark:text-emerald-300'
                 : delta < 0
-                  ? 'text-zinc-400'
+                  ? 'text-zinc-500 dark:text-zinc-400'
                   : 'text-zinc-500'
             }`}
           >
             {delta > 0 ? '↑' : delta < 0 ? '↓' : '·'} {Math.abs(delta)}%
-            <span className="ml-1 text-zinc-600">
+            <span className="ml-1 text-zinc-400 dark:text-zinc-600">
               {prePct}% to {livePct}%
             </span>
           </div>
         )}
       </div>
-      <div className="relative mt-2.5 h-1.5 overflow-hidden rounded-full bg-zinc-800">
+      <div className="relative mt-2.5 h-1.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
         <div
-          className="h-full rounded-full bg-zinc-200"
+          className="h-full rounded-full bg-zinc-800 dark:bg-zinc-200"
           style={{ width: `${fill}%` }}
         />
         <div
-          className="absolute top-0 h-full w-0.5 bg-zinc-500"
+          className="absolute top-0 h-full w-0.5 bg-zinc-400 dark:bg-zinc-500"
           style={{ left: `calc(${tick}% - 1px)` }}
           title={`Pregame ${prePct}%`}
         />
@@ -155,8 +157,6 @@ function WinChanceBlock({
     </div>
   )
 }
-
-
 
 export function GameCard({ game }: GameCardProps) {
   const status = deriveCardStatus(game)
@@ -179,20 +179,22 @@ export function GameCard({ game }: GameCardProps) {
 
   return (
     <article
-      className={`rounded-xl border bg-zinc-900/80 px-4 py-4 sm:px-5 sm:py-5 ${
+      className={`rounded-xl border bg-white px-4 py-4 shadow-sm sm:px-5 sm:py-5 dark:bg-zinc-900/80 dark:shadow-none ${
         status.state === 'upset_in_progress'
-          ? 'upset-hot border-emerald-800/70'
-          : 'border-zinc-800'
+          ? 'upset-hot border-emerald-400/80 dark:border-emerald-800/70'
+          : 'border-zinc-200 dark:border-zinc-800'
       }`}
     >
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-2 text-sm text-zinc-500">
-          <span className="font-medium uppercase tracking-wide text-zinc-400">
+          <span className="font-medium uppercase tracking-wide text-zinc-600 dark:text-zinc-400">
             {game.league}
           </span>
-          <span className="truncate text-zinc-400">{timeLabel}</span>
+          <span className="truncate text-zinc-500 dark:text-zinc-400">
+            {timeLabel}
+          </span>
           {game.delayed && (
-            <span className="rounded border border-zinc-600 px-1.5 py-0.5 text-[10px] font-medium text-zinc-300">
+            <span className="rounded border border-zinc-300 px-1.5 py-0.5 text-[10px] font-medium text-zinc-600 dark:border-zinc-600 dark:text-zinc-300">
               Delayed
             </span>
           )}

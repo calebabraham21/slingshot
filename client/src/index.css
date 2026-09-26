@@ -1,12 +1,35 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Outfit:wght@600;700&display=swap');
 @import 'tailwindcss';
 
+/* Class-based dark mode (html.dark). Light is the unprefixed baseline. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
   --font-display: 'Outfit', ui-sans-serif, system-ui, sans-serif;
 }
 
+:root {
+  --rock-idle: #d4d4d8;
+  --rock-active: #71717a;
+  --rock-hot: #c2410c;
+  --rock-shine: rgba(255, 255, 255, 0.35);
+  --rock-shine-idle: rgba(255, 255, 255, 0.12);
+}
+
+.dark {
+  --rock-idle: #3f3f46;
+  --rock-active: #a8a29e;
+  --rock-hot: #c2410c;
+  --rock-shine: rgba(255, 255, 255, 0.16);
+  --rock-shine-idle: rgba(255, 255, 255, 0.05);
+}
+
 html {
+  color-scheme: light;
+}
+
+html.dark {
   color-scheme: dark;
 }
 
@@ -14,8 +37,14 @@ body {
   margin: 0;
   min-height: 100dvh;
   font-family: var(--font-sans);
-  background-color: #0c0c0e;
+  background-color: #f4f4f5;
+  color: #18181b;
   -webkit-font-smoothing: antialiased;
+}
+
+html.dark body {
+  background-color: #0c0c0e;
+  color: #f4f4f5;
 }
 
 .font-display {
@@ -44,8 +73,21 @@ body {
   animation: live-pulse 1.4s ease-in-out infinite;
 }
 
-/* Lightweight “on fire” frame for true upsets. CSS shadow only. */
 @keyframes upset-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.22), 0 0 12px rgba(16, 185, 129, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.38), 0 0 18px rgba(16, 185, 129, 0.18);
+  }
+}
+
+.dark .upset-hot {
+  animation: upset-glow-dark 2.4s ease-in-out infinite;
+}
+
+@keyframes upset-glow-dark {
   0%,
   100% {
     box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.18), 0 0 12px rgba(52, 211, 153, 0.08);
@@ -66,6 +108,10 @@ body {
   }
 
   .upset-hot {
+    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.28);
+  }
+
+  .dark .upset-hot {
     box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.22);
   }
 }
