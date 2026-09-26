@@ -6,35 +6,35 @@ const STYLES: Record<
   { chip: string; edge: string }
 > = {
   upset: {
-    chip: 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-200 dark:border-emerald-700',
+    chip: 'bg-emerald-600 text-white border-transparent',
     edge: 'border-l-emerald-500',
   },
   leadingEarly: {
-    chip: 'bg-emerald-50/80 text-emerald-700 border-emerald-200 dark:bg-emerald-950/70 dark:text-emerald-100/90 dark:border-emerald-900',
+    chip: 'bg-emerald-500 text-white border-transparent',
     edge: 'border-l-emerald-700/80',
   },
   stillInIt: {
-    chip: 'bg-amber-50 text-amber-900 border-amber-300 dark:bg-amber-950 dark:text-amber-100 dark:border-amber-800',
+    chip: 'bg-amber-500 text-white border-transparent',
     edge: 'border-l-amber-500',
   },
   longShot: {
-    chip: 'bg-orange-50 text-orange-800 border-orange-300 dark:bg-orange-950/80 dark:text-orange-200/90 dark:border-orange-900',
+    chip: 'bg-orange-500 text-white border-transparent',
     edge: 'border-l-orange-700/70',
   },
   fading: {
-    chip: 'bg-zinc-100 text-zinc-600 border-zinc-300 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-700',
+    chip: 'bg-zinc-500 text-white border-transparent',
     edge: 'border-l-zinc-600',
   },
   notStarted: {
-    chip: 'bg-slate-100 text-slate-700 border-slate-300 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-700',
+    chip: 'bg-slate-500 text-white border-transparent',
     edge: 'border-l-slate-500',
   },
   finalUpset: {
-    chip: 'bg-amber-50 text-amber-900 border-amber-400 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-600',
+    chip: 'bg-amber-600 text-white border-transparent',
     edge: 'border-l-amber-400',
   },
   finalHeld: {
-    chip: 'bg-zinc-100 text-zinc-500 border-zinc-200 dark:bg-zinc-900 dark:text-zinc-500 dark:border-zinc-800',
+    chip: 'bg-zinc-400 text-white border-transparent',
     edge: 'border-l-zinc-700',
   },
 }

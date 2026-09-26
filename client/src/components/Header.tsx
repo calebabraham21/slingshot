@@ -13,7 +13,7 @@ export function Header({ theme, onToggleTheme }: HeaderProps) {
       : '/slingshot-logo-black.png'
 
   return (
-    <header className="border-b border-zinc-200/90 bg-zinc-50 dark:border-zinc-800/90 dark:bg-zinc-950">
+    <header className="border-b border-zinc-200/90 bg-zinc-50 dark:border-zinc-700/90 dark:bg-zinc-900">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
         <a href="/" className="inline-flex items-center">
           <img
@@ -24,7 +24,7 @@ export function Header({ theme, onToggleTheme }: HeaderProps) {
         </a>
         <div className="flex items-center gap-3">
           <p className="hidden text-sm text-zinc-500 sm:block">
-            Underdogs ranked by win chance
+            Who’s the biggest underdog right now?
           </p>
           <ThemeToggle theme={theme} onToggle={onToggleTheme} />
         </div>

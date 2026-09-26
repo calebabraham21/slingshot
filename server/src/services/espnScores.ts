@@ -32,7 +32,24 @@ async function loadSport(sport: SportConfig): Promise<CacheBucket> {
   }
 
   try {
-    const games = await fetchEspnScoreboard(sport.espn)
+    const fresh = await fetchEspnScoreboard(sport.espn)
+    const prevById = new Map(
+      (cached?.games ?? []).map((snap) => [snap.espnId, snap]),
+    )
+    const games = fresh.map((snap) => {
+      if (snap.state !== 'in') {
+        return snap
+      }
+      if (snap.footballSituation) {
+        return snap
+      }
+      // Only reuse a prior drive if possession + ball spot still match.
+      const previous = prevById.get(snap.espnId)?.footballSituation
+      if (!previous) {
+        return snap
+      }
+      return { ...snap, footballSituation: previous }
+    })
     const byMatchup = new Map<string, EspnGameSnapshot>()
     for (const snap of games) {
       byMatchup.set(matchKey(snap.awayName, snap.homeName), snap)

@@ -120,6 +120,9 @@ function buildGame(
     ...(drawProb != null ? { drawProb } : {}),
     underdogSide,
     underdogState,
+    ...(snap.footballSituation
+      ? { footballSituation: snap.footballSituation }
+      : {}),
   }
 }
 

@@ -14,7 +14,7 @@ interface StatusTabsProps {
 export function StatusTabs({ value, onChange }: StatusTabsProps) {
   return (
     <div
-      className="inline-flex rounded-lg border border-zinc-200 bg-white p-1 dark:border-zinc-800 dark:bg-zinc-900/80"
+      className="inline-flex rounded-lg border border-zinc-200 bg-white p-1 dark:border-zinc-700 dark:bg-zinc-800"
       role="tablist"
       aria-label="Filter by game status"
     >

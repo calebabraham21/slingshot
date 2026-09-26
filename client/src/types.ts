@@ -22,6 +22,21 @@ export interface Team {
   logo?: string
 }
 
+/** Live football drive context from ESPN (NFL / NCAAF). */
+export interface FootballSituation {
+  possession: Side
+  downDistanceText: string
+  shortDownDistanceText?: string
+  possessionText?: string
+  isRedZone?: boolean
+  lastPlay?: string
+  driveSummary?: string
+  /** Absolute yards from home end zone (0 = home goal, 100 = away goal). */
+  ballYardline?: number
+  /** Drive start on the same absolute scale. */
+  driveStartYardline?: number
+}
+
 export interface Game {
   id: string
   sport: Sport
@@ -49,4 +64,5 @@ export interface Game {
   drawProb?: number
   underdogSide: Side
   underdogState: UnderdogState
+  footballSituation?: FootballSituation
 }
